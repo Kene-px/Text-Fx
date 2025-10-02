@@ -7,6 +7,21 @@ interface AnimationSettings {
   typeBy: 'letter' | 'word';
   direction: 'forward' | 'backwards';
   duration: number;
+  color: string;
+}
+
+// Helper function to convert hex color to RGB
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) {
+    // Default to white if invalid hex
+    return { r: 1, g: 1, b: 1 };
+  }
+  return {
+    r: parseInt(result[1], 16) / 255,
+    g: parseInt(result[2], 16) / 255,
+    b: parseInt(result[3], 16) / 255
+  };
 }
 
 interface ComponentData {
@@ -168,17 +183,25 @@ async function createAnimationComponent(data: ComponentData) {
     componentSet.x = figma.viewport.center.x;
     componentSet.y = figma.viewport.center.y;
 
-    // Position variants
-    positionVariants(Array.from(componentSet.children) as ComponentNode[]);
+    // Position variants and resize component set to fit all variants
+    const componentVariants = Array.from(componentSet.children) as ComponentNode[];
+    positionVariants(componentVariants);
+    resizeComponentSetToFitVariants(componentSet, componentVariants);
+
+    // Setup automatic prototyping interactions
+    await setupPrototypingInteractions(componentVariants, animation.duration);
 
     // Select the component set
     figma.currentPage.selection = [componentSet];
     figma.viewport.scrollAndZoomIntoView([componentSet]);
 
+    // Switch to prototype mode and auto-start animation
+    await activatePrototypeMode(componentSet, Array.from(componentSet.children) as ComponentNode[]);
+
     // Notify UI of success
     figma.ui.postMessage({
       type: 'component-created',
-      data: { success: true }
+      data: { success: true, prototyped: true }
     });
 
   } catch (error) {
@@ -309,7 +332,8 @@ async function createTextNodeForFrame(
   }
   // Set basic text properties
   textNode.fontSize = 16;
-  textNode.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+  const textColor = hexToRgb(animation.color);
+  textNode.fills = [{ type: 'SOLID', color: textColor }];
   return textNode;
 }
 
@@ -384,6 +408,144 @@ function positionVariants(variants: ComponentNode[]) {
     variant.y = yPosition;
     xOffset += variant.width + spacing;
   });
+}
+
+function resizeComponentSetToFitVariants(componentSet: ComponentSetNode, variants: ComponentNode[]) {
+  if (variants.length === 0) return;
+
+  // Calculate the bounding box that contains all variants
+  let minX = Math.min(...variants.map(v => v.x));
+  let minY = Math.min(...variants.map(v => v.y));
+  let maxX = Math.max(...variants.map(v => v.x + v.width));
+  let maxY = Math.max(...variants.map(v => v.y + v.height));
+
+  // Add some padding around the variants
+  const padding = 10;
+  minX -= padding;
+  minY -= padding;
+  maxX += padding;
+  maxY += padding;
+
+  // Calculate the new dimensions
+  const newWidth = maxX - minX;
+  const newHeight = maxY - minY;
+
+  // Adjust variant positions if minX or minY is negative
+  if (minX < 0 || minY < 0) {
+    const offsetX = Math.max(0, -minX);
+    const offsetY = Math.max(0, -minY);
+    
+    variants.forEach((variant) => {
+      variant.x += offsetX;
+      variant.y += offsetY;
+    });
+    
+    // Update bounds after repositioning
+    minX = Math.max(0, minX);
+    minY = Math.max(0, minY);
+  }
+
+  // Resize the component set to fit all variants
+  componentSet.resizeWithoutConstraints(newWidth, newHeight);
+}
+
+async function setupPrototypingInteractions(variants: ComponentNode[], duration: number) {
+  // Convert duration from seconds to milliseconds for Figma API
+  const delayMs = Math.max(duration * 1000, 500); // Minimum 500ms delay
+  
+  for (let i = 0; i < variants.length; i++) {
+    const currentVariant = variants[i];
+    const nextVariant = variants[(i + 1) % variants.length]; // Loop back to first variant
+    
+    try {
+      // Create automatic transition reaction after delay
+      const reaction: Reaction = {
+        actions: [{
+          type: 'NODE',
+          destinationId: nextVariant.id,
+          navigation: 'NAVIGATE',
+          transition: {
+            type: 'DISSOLVE',
+            duration: 0.3, // 300ms transition duration (in seconds)
+            easing: { type: 'EASE_OUT' }
+          },
+          preserveScrollPosition: false
+        }],
+        trigger: {
+          type: 'AFTER_TIMEOUT',
+          timeout: delayMs
+        }
+      };
+      
+      // Set the reaction on the current variant
+      await currentVariant.setReactionsAsync([reaction]);
+      
+    } catch (error) {
+      console.warn(`Failed to set reaction on variant ${i}:`, error);
+    }
+  }
+}
+
+async function activatePrototypeMode(componentSet: ComponentSetNode, variants: ComponentNode[]) {
+  try {
+    // Store prototype data for reference
+    componentSet.setPluginData('isPrototyped', 'true');
+    componentSet.setPluginData('prototypeTimestamp', Date.now().toString());
+    
+    // Select the first variant to start the prototype
+    const firstVariant = variants[0];
+    if (firstVariant) {
+      // Select the first variant and trigger a prototype interaction
+      figma.currentPage.selection = [firstVariant];
+      
+      // Auto-start the animation by programmatically triggering the first interaction
+      await triggerFirstInteraction(firstVariant);
+      
+      // Select the component set after a brief delay
+      setTimeout(() => {
+        figma.currentPage.selection = [componentSet];
+        
+        // Notify Figma to show prototype mode
+        figma.ui.postMessage({
+          type: 'prototype-ready',
+          data: { componentId: componentSet.id, startVariantId: firstVariant.id }
+        });
+      }, 200);
+    }
+    
+    console.log('Prototype mode activated and animation started for component:', componentSet.name);
+    
+  } catch (error) {
+    console.warn('Failed to activate prototype mode:', error);
+  }
+}
+
+async function triggerFirstInteraction(firstVariant: ComponentNode) {
+  try {
+    // Get the reactions from the first variant
+    const reactions = firstVariant.reactions;
+    
+    if (reactions.length > 0) {
+      // The interactions are set up with AFTER_TIMEOUT triggers, 
+      // so the animation will start automatically when the prototype is viewed
+      console.log('First variant has reactions set up, animation will auto-start');
+      
+      // We can also create an immediate trigger by adding a click interaction
+      // that starts the sequence right away
+      const immediateReaction: Reaction = {
+        actions: reactions[0].actions, // Use the same action as the timeout
+        trigger: {
+          type: 'ON_CLICK' // Immediate trigger on click
+        }
+      };
+      
+      // Add both the timeout and click reactions
+      await firstVariant.setReactionsAsync([...reactions, immediateReaction]);
+    }
+    
+  } catch (error) {
+    console.warn('Failed to set up immediate trigger:', error);
+  }
 }
 
 // Run the appropriate code based on editor type
@@ -512,7 +674,8 @@ async function createFigJamAnimation(data: ComponentData) {
       const frameText = getFrameText(text, animation, i, frameCount);
       shape.text.characters = frameText;
       shape.text.fontSize = 16;
-      shape.text.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
+      const textColor = hexToRgb(animation.color);
+      shape.text.fills = [{ type: 'SOLID', color: textColor }];
       // Position shapes horizontally
       shape.x = i * (shape.width + 50);
       shape.y = figma.viewport.center.y;
@@ -568,7 +731,8 @@ async function createSlidesAnimation(data: ComponentData) {
       const frameText = getFrameText(text, animation, i, frameCount);
       textNode.characters = frameText;
       textNode.fontSize = 24;
-      textNode.fills = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0 } }];
+      const textColor = hexToRgb(animation.color);
+      textNode.fills = [{ type: 'SOLID', color: textColor }];
       // Center text on slide
       textNode.x = (slide.width - textNode.width) / 2;
       textNode.y = (slide.height - textNode.height) / 2;
