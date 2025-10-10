@@ -559,6 +559,32 @@
             background: #0052cc;
         }
 
+        .create-btn:disabled {
+            background: #71717A;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .create-btn.loading {
+            background: #71717A;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid #ffffff40;
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         .export-json-btn {
             max-width: 160px;
             align-items: center;
@@ -1234,7 +1260,8 @@
                             </clipPath>
                             </defs>
                         </svg>
-                        Create component
+                        <div class="spinner" id="create-btn-spinner" style="display: none;"></div>
+                        <span id="create-btn-text">Create component</span>
                     </button>
                     <button class="export-json-btn" id="export-json-btn">
                         Export as JSON
@@ -3029,6 +3056,9 @@
         }
 
         function createComponent() {
+            // Show loading state
+            setCreateButtonLoading(true);
+            
             // Ensure we have the latest color from the color picker
             const colorInput = document.getElementById('color-picker-input');
             if (colorInput) {
@@ -3052,21 +3082,47 @@
             }, '*');
         }
 
+        function setCreateButtonLoading(isLoading) {
+            const createBtn = document.getElementById('create-btn');
+            const spinner = document.getElementById('create-btn-spinner');
+            const btnText = document.getElementById('create-btn-text');
+            const btnSvg = document.querySelector('.create-btn-svg');
+            
+            if (isLoading) {
+                createBtn.classList.add('loading');
+                createBtn.disabled = true;
+                spinner.style.display = 'block';
+                btnText.textContent = 'Creating...';
+                btnSvg.style.display = 'none';
+            } else {
+                createBtn.classList.remove('loading');
+                createBtn.disabled = false;
+                spinner.style.display = 'none';
+                btnText.textContent = 'Create component';
+                btnSvg.style.display = 'block';
+            }
+        }
+
         function handleComponentCreated(data) {
+            // Always hide loading state first
+            setCreateButtonLoading(false);
+            
             if (data.success && data.prototyped) {
                 // Show success feedback with prototype information
                 showPrototypeSuccessMessage();
                 
                 // Optional: Update the UI to reflect that component is prototyped
-                const elements = getDOMElements();
-                if (elements.createBtn) {
-                    elements.createBtn.textContent = 'Component Created & Prototyped!';
-                    elements.createBtn.style.background = '#00D084';
+                const createBtn = document.getElementById('create-btn');
+                const btnText = document.getElementById('create-btn-text');
+                
+                if (createBtn && btnText) {
+                    createBtn.style.background = '#00D084';
+                    btnText.textContent = 'Component Created & Prototyped!';
                     
                     // Reset button after a delay
                     setTimeout(() => {
-                        elements.createBtn.textContent = 'Create Component';
-                        elements.createBtn.style.background = '';
+                        btnText.textContent = 'Create component';
+                        createBtn.style.background = '';
                     }, 3000);
                 }
             } else if (!data.success) {

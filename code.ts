@@ -73,29 +73,6 @@ if (figma.editorType === 'figma') {
   console.log('Editor type is:', figma.editorType);
 }
 
-// function sendSelectionToUI() {
-//   const selection = figma.currentPage.selection;
-  
-//   if (selection.length === 1 && selection[0].type === 'TEXT') {
-//     const textNode = selection[0] as TextNode;
-//     const selectionData: SelectionData = {
-//       type: 'TEXT',
-//       name: textNode.name,
-//       content: textNode.characters
-//     };
-    
-//     figma.ui.postMessage({
-//       type: 'selection-changed',
-//       data: selectionData
-//     });
-//   } else {
-//     figma.ui.postMessage({
-//       type: 'selection-changed',
-//       data: null
-//     });
-//   }
-// }
-
 function sendSelectionToUI() {
   const selection = figma.currentPage.selection;
   
@@ -188,15 +165,19 @@ async function createAnimationComponent(data: ComponentData) {
     positionVariants(componentVariants);
     resizeComponentSetToFitVariants(componentSet, componentVariants);
 
-    // Setup automatic prototyping interactions
-    await setupPrototypingInteractions(componentVariants, animation.duration);
+    // Add a small delay to ensure variants are properly set up after combining
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Setup simple prototyping interactions
+    await setupSimplePrototyping(componentVariants, animation);
+
+    // Mark component set as prototyped
+    componentSet.setPluginData('isPrototyped', 'true');
+    componentSet.setPluginData('prototypeTimestamp', Date.now().toString());
 
     // Select the component set
     figma.currentPage.selection = [componentSet];
     figma.viewport.scrollAndZoomIntoView([componentSet]);
-
-    // Switch to prototype mode and auto-start animation
-    await activatePrototypeMode(componentSet, Array.from(componentSet.children) as ComponentNode[]);
 
     // Notify UI of success
     figma.ui.postMessage({
@@ -223,7 +204,7 @@ async function createAnimationVariants(
   const { style, typeBy, duration } = animation;
 
   // Determine number of frames based on animation type and duration
-  const frameCount = calculateFrameCount(style, typeBy, duration, text.length);
+  const frameCount = calculateFrameCount(style, typeBy, duration, text);
   
   for (let i = 0; i < frameCount; i++) {
     const variant = figma.createComponent();
@@ -249,24 +230,27 @@ function calculateFrameCount(
   style: string, 
   typeBy: 'letter' | 'word', 
   duration: number, 
-  textLength: number
+  text: string
 ): number {
   switch (style) {
     case 'typing':
-      return typeBy === 'letter' ? textLength + 1 : 2;
+      return typeBy === 'letter' ? text.length + 1 : text.split(' ').length + 1;
     case 'fade-in':
     case 'fade-out':
-      return typeBy === 'letter' ? Math.min(textLength, 8) : 5;
+      return typeBy === 'letter' ? text.length + 1 : text.split(' ').length + 1;
     case 'slide-left':
     case 'slide-right':
     case 'slide-up':
     case 'slide-down':
-      return typeBy === 'letter' ? Math.min(textLength, 6) : 4;
+      return typeBy === 'letter' ? text.length + 1 : text.split(' ').length + 1;
     case 'scale':
+    case 'scale-grow':
+    case 'scale-shrink':
+      return typeBy === 'letter' ? text.length + 1 : text.split(' ').length + 1;
     case 'rotate':
-      return typeBy === 'letter' ? Math.min(textLength, 6) : 4;
+      return typeBy === 'letter' ? text.length + 1 : text.split(' ').length + 1;
     default:
-      return 3;
+      return text.split(' ').length + 1;
   }
 }
 
@@ -309,6 +293,30 @@ async function createTextNodeForFrame(
       textNode.resize(textNode.width * scale, textNode.height * scale);
       break;
     }
+    case 'scale-grow': {
+      textNode.characters = text;
+      if (typeBy === 'word') {
+        applyWordScaleGrowEffect(textNode, text, frameIndex, totalFrames, direction);
+      } else {
+        const scale = direction === 'forward' 
+          ? Math.min(progress * 1.2, 1)
+          : Math.max(1 - progress * 1.2, 0.1);
+        textNode.opacity = Math.min(progress * 1.5, 1);
+      }
+      break;
+    }
+    case 'scale-shrink': {
+      textNode.characters = text;
+      if (typeBy === 'word') {
+        applyWordScaleShrinkEffect(textNode, text, frameIndex, totalFrames, direction);
+      } else {
+        const scale = direction === 'forward' 
+          ? Math.max(1 - progress * 1.2, 0.1)
+          : Math.min(progress * 1.2, 1);
+        textNode.opacity = Math.max(1 - progress * 1.2, 0.1);
+      }
+      break;
+    }
     case 'slide-left':
     case 'slide-right':
     case 'slide-up':
@@ -319,11 +327,15 @@ async function createTextNodeForFrame(
     }
     case 'rotate': {
       textNode.characters = text;
-      // Note: Figma doesn't support rotation via API, so we'll simulate with scaling
-      const rotateScale = typeBy === 'letter' 
-        ? applyLetterScale(frameIndex, totalFrames)
-        : Math.min(progress * 1.2, 1);
-      textNode.resize(textNode.width * rotateScale, textNode.height * rotateScale);
+      if (typeBy === 'word') {
+        applyWordRotateEffect(textNode, text, frameIndex, totalFrames, direction);
+      } else {
+        // Note: Figma doesn't support rotation via API, so we'll simulate with scaling and opacity
+        const rotateScale = direction === 'forward'
+          ? Math.min(progress * 1.2, 1)
+          : Math.max(1 - progress * 1.2, 0.1);
+        textNode.opacity = Math.min(progress * 1.5, 1);
+      }
       break;
     }
     default: {
@@ -398,15 +410,90 @@ function applySlideEffect(
   // For word-based, the text remains the same as it's handled at component level
 }
 
+function applyWordScaleGrowEffect(
+  textNode: TextNode, 
+  text: string, 
+  frameIndex: number, 
+  totalFrames: number, 
+  direction: 'forward' | 'backwards'
+) {
+  const words = text.split(' ');
+  if (frameIndex === 0) {
+    textNode.characters = '';
+    textNode.opacity = 0;
+  } else {
+    const wordIndex = direction === 'forward' 
+      ? Math.min(frameIndex - 1, words.length - 1)
+      : Math.max(words.length - frameIndex, 0);
+    
+    const visibleWords = direction === 'forward' 
+      ? words.slice(0, wordIndex + 1)
+      : words.slice(wordIndex);
+    
+    textNode.characters = visibleWords.join(' ');
+    textNode.opacity = 1;
+  }
+}
+
+function applyWordScaleShrinkEffect(
+  textNode: TextNode, 
+  text: string, 
+  frameIndex: number, 
+  totalFrames: number, 
+  direction: 'forward' | 'backwards'
+) {
+  const words = text.split(' ');
+  if (frameIndex === totalFrames - 1) {
+    textNode.characters = '';
+    textNode.opacity = 0;
+  } else {
+    const remainingWords = direction === 'forward' 
+      ? Math.max(words.length - frameIndex, 0)
+      : Math.min(frameIndex + 1, words.length);
+    
+    const visibleWords = direction === 'forward' 
+      ? words.slice(0, remainingWords)
+      : words.slice(0, remainingWords);
+    
+    textNode.characters = visibleWords.join(' ');
+    textNode.opacity = 1;
+  }
+}
+
+function applyWordRotateEffect(
+  textNode: TextNode, 
+  text: string, 
+  frameIndex: number, 
+  totalFrames: number, 
+  direction: 'forward' | 'backwards'
+) {
+  const words = text.split(' ');
+  if (frameIndex === 0) {
+    textNode.characters = '';
+    textNode.opacity = 0;
+  } else {
+    const wordIndex = direction === 'forward' 
+      ? Math.min(frameIndex - 1, words.length - 1)
+      : Math.max(words.length - frameIndex, 0);
+    
+    const visibleWords = direction === 'forward' 
+      ? words.slice(0, wordIndex + 1)
+      : words.slice(wordIndex);
+    
+    textNode.characters = visibleWords.join(' ');
+    textNode.opacity = 1;
+  }
+}
+
 function positionVariants(variants: ComponentNode[]) {
-  let xOffset = 0;
-  const yPosition = 0;
+  const xPosition = 0;
+  let yOffset = 0;
   const spacing = 20;
 
   variants.forEach((variant) => {
-    variant.x = xOffset;
-    variant.y = yPosition;
-    xOffset += variant.width + spacing;
+    variant.x = xPosition;
+    variant.y = yOffset;
+    yOffset += variant.height + spacing;
   });
 }
 
@@ -449,44 +536,153 @@ function resizeComponentSetToFitVariants(componentSet: ComponentSetNode, variant
   componentSet.resizeWithoutConstraints(newWidth, newHeight);
 }
 
-async function setupPrototypingInteractions(variants: ComponentNode[], duration: number) {
-  // Convert duration from seconds to milliseconds for Figma API
-  const delayMs = Math.max(duration * 1000, 500); // Minimum 500ms delay
-  
-  for (let i = 0; i < variants.length; i++) {
-    const currentVariant = variants[i];
-    const nextVariant = variants[(i + 1) % variants.length]; // Loop back to first variant
+
+async function setupSimplePrototyping(variants: ComponentNode[], animation: AnimationSettings) {
+  try {
+    if (variants.length < 2) {
+      console.log('Need at least 2 variants for prototyping');
+      return;
+    }
+
+    console.log(`Setting up simple prototyping for ${variants.length} variants`);
     
-    try {
-      // Create automatic transition reaction after delay
+    // Create minimal reaction format
+    for (let i = 0; i < variants.length; i++) {
+      const currentVariant = variants[i];
+      const nextVariant = variants[(i + 1) % variants.length];
+      
+      // Use the most minimal reaction format that Figma accepts
+      const reaction: Reaction = {
+        actions: [{
+          type: 'NODE',
+          destinationId: nextVariant.id,
+          navigation: 'CHANGE_TO',
+          transition: {
+            type: 'DISSOLVE',
+            duration: 0.1,
+            easing: { type: 'LINEAR' }
+          }
+        }],
+        trigger: {
+          type: 'ON_CLICK'
+        }
+      };
+      
+      await currentVariant.setReactionsAsync([reaction]);
+    }
+    
+    console.log('Simple prototyping setup complete');
+    
+  } catch (error) {
+    console.warn('Simple prototyping setup failed:', error);
+  }
+}
+
+async function setupPrototypingInteractions(variants: ComponentNode[], animationSettings: AnimationSettings) {
+  console.log('setupPrototypingInteractions called with:', {
+    variantCount: variants.length,
+    animationSettings,
+    variantNames: variants.map(v => v.name),
+    variantIds: variants.map(v => v.id)
+  });
+
+  const { duration, style, direction } = animationSettings;
+  
+  // Calculate timing between frames
+  const frameDelay = Math.max(duration * 1000 / variants.length, 300); // At least 300ms per frame
+  
+  // Determine transition type based on animation style
+  const transitionType = style.includes('scale') || style === 'rotate' ? 'SMART_ANIMATE' : 'DISSOLVE';
+  
+  // Determine easing based on animation style
+  const getEasing = (animStyle: string): { type: 'EASE_IN' | 'EASE_OUT' | 'EASE_IN_AND_OUT' | 'LINEAR' } => {
+    switch (animStyle) {
+      case 'scale-grow':
+        return { type: 'EASE_OUT' };
+      case 'scale-shrink':
+        return { type: 'EASE_IN' };
+      case 'typing':
+        return { type: 'LINEAR' };
+      case 'rotate':
+        return { type: 'EASE_IN_AND_OUT' };
+      default:
+        return { type: 'EASE_OUT' };
+    }
+  };
+
+  const easing = getEasing(style);
+  
+  try {
+    // Set up chain of reactions between variants based on direction
+    const frameOrder = direction === 'forward' 
+      ? variants.map((_, i) => i)
+      : variants.map((_, i) => variants.length - 1 - i);
+    
+    console.log(`Direction: ${direction}, Frame order: [${frameOrder.join(', ')}]`);
+    
+    // Set up chain of reactions between variants
+    for (let i = 0; i < variants.length; i++) {
+      const currentIndex = frameOrder[i];
+      const nextIndex = frameOrder[(i + 1) % frameOrder.length];
+      
+      const currentVariant = variants[currentIndex];
+      const nextVariant = variants[nextIndex];
+      
+      if (!currentVariant || !nextVariant) {
+        console.error(`❌ Missing variant: currentVariant=${currentVariant}, nextVariant=${nextVariant}`);
+        continue;
+      }
+      
+      if (!currentVariant.id || !nextVariant.id) {
+        console.error(`❌ Invalid variant IDs: current=${currentVariant.id}, next=${nextVariant.id}`);
+        continue;
+      }
+      
+      console.log(`Setting up reaction from variant ${currentIndex} (${currentVariant.name}) to ${nextIndex} (${nextVariant.name})`);
+      
+      // Create a reaction from current to next variant using simplified format
       const reaction: Reaction = {
         actions: [{
           type: 'NODE',
           destinationId: nextVariant.id,
           navigation: 'NAVIGATE',
           transition: {
-            type: 'DISSOLVE',
-            duration: 0.3, // 300ms transition duration (in seconds)
-            easing: { type: 'EASE_OUT' }
-          },
-          preserveScrollPosition: false
+            type: transitionType,
+            duration: 0.3,
+            easing: easing
+          }
         }],
         trigger: {
-          type: 'AFTER_TIMEOUT',
-          timeout: delayMs
+          type: 'ON_CLICK'
         }
       };
       
-      // Set the reaction on the current variant
-      await currentVariant.setReactionsAsync([reaction]);
+      console.log(`Reaction details:`, {
+        from: currentVariant.name,
+        to: nextVariant.name,
+        transitionType,
+        frameDelay,
+        easing
+      });
       
-    } catch (error) {
-      console.warn(`Failed to set reaction on variant ${i}:`, error);
+      // Set the reaction on the current variant
+      try {
+        await currentVariant.setReactionsAsync([reaction]);
+        console.log(`✅ Successfully set reaction on variant ${currentVariant.name}`);
+      } catch (reactionError) {
+        console.error(`❌ Failed to set reaction on variant ${currentVariant.name}:`, reactionError);
+        throw reactionError;
+      }
     }
+    
+    console.log(`Successfully set up prototyping chain for ${variants.length} variants`);
+    
+  } catch (error) {
+    console.error('Failed to set up prototyping interactions:', error);
   }
 }
 
-async function activatePrototypeMode(componentSet: ComponentSetNode, variants: ComponentNode[]) {
+async function activatePrototypeMode(componentSet: ComponentSetNode, variants: (ComponentNode | InstanceNode)[]) {
   try {
     // Store prototype data for reference
     componentSet.setPluginData('isPrototyped', 'true');
@@ -520,7 +716,7 @@ async function activatePrototypeMode(componentSet: ComponentSetNode, variants: C
   }
 }
 
-async function triggerFirstInteraction(firstVariant: ComponentNode) {
+async function triggerFirstInteraction(firstVariant: ComponentNode | InstanceNode) {
   try {
     // Get the reactions from the first variant
     const reactions = firstVariant.reactions;
@@ -665,7 +861,7 @@ async function createFigJamAnimation(data: ComponentData) {
     const { text, animation } = data;
     // Create shapes with text for each animation frame
     const shapes: SceneNode[] = [];
-    const frameCount = calculateFrameCount(animation.style, animation.typeBy, animation.duration, text.length);
+    const frameCount = calculateFrameCount(animation.style, animation.typeBy, animation.duration, text);
     for (let i = 0; i < frameCount; i++) {
       const shape = figma.createShapeWithText();
       shape.shapeType = 'ROUNDED_RECTANGLE';
@@ -721,7 +917,7 @@ async function createSlidesAnimation(data: ComponentData) {
     const { text, animation } = data;
     // Create multiple slides for the animation sequence
     const slides: SlideNode[] = [];
-    const frameCount = calculateFrameCount(animation.style, animation.typeBy, animation.duration, text.length);
+    const frameCount = calculateFrameCount(animation.style, animation.typeBy, animation.duration, text);
     for (let i = 0; i < frameCount; i++) {
       const slide = figma.createSlide();
       slide.name = `${text} Animation - Step ${i + 1}`;
@@ -788,12 +984,33 @@ function getFrameText(
     case 'slide-up':
     case 'slide-down':
     case 'scale':
-    case 'rotate':
       if (typeBy === 'letter') {
         const visibleLength = Math.floor(progress * text.length);
         return text.substring(0, visibleLength);
       } else {
         return text;
+      }
+      
+    case 'scale-grow':
+    case 'scale-shrink':
+      if (typeBy === 'word') {
+        const words = text.split(' ');
+        if (frameIndex === 0) return '';
+        const wordIndex = Math.min(frameIndex - 1, words.length - 1);
+        return words.slice(0, wordIndex + 1).join(' ');
+      } else {
+        return text;
+      }
+      
+    case 'rotate':
+      if (typeBy === 'word') {
+        const words = text.split(' ');
+        if (frameIndex === 0) return '';
+        const wordIndex = Math.min(frameIndex - 1, words.length - 1);
+        return words.slice(0, wordIndex + 1).join(' ');
+      } else {
+        const visibleLength = Math.floor(progress * text.length);
+        return text.substring(0, visibleLength);
       }
       
     default:
