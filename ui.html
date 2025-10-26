@@ -603,9 +603,45 @@
             transition: all 0.2s;
         }
 
-        .export-json-btn:hover {
+        .export-json-btn:hover:not(:disabled) {
             background: rgba(59, 130, 246, 0.1);
             color: #3B82F6;
+        }
+
+        .export-json-btn:disabled {
+            color: #71717A;
+            background: transparent;
+            cursor: not-allowed;
+            position: relative;
+        }
+
+        .export-json-btn:disabled:hover::after {
+            content: "Coming Soon";
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 5px;
+            padding: 6px 10px;
+            background: #18181B;
+            color: #ffffff;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .export-json-btn:disabled:hover::before {
+            content: "";
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 4px solid transparent;
+            border-top-color: #18181B;
+            z-index: 1000;
+            pointer-events: none;
         }
 
         .color-picker-container {
@@ -1263,7 +1299,7 @@
                         <div class="spinner" id="create-btn-spinner" style="display: none;"></div>
                         <span id="create-btn-text">Create component</span>
                     </button>
-                    <button class="export-json-btn" id="export-json-btn">
+                    <button class="export-json-btn" id="export-json-btn" disabled>
                         Export as JSON
                     </button>
                 </div> 
@@ -2225,10 +2261,15 @@
                 elements.createBtn.addEventListener('click', createComponent);
             }
             
-            // Export JSON button
+            // Export JSON button - temporarily disabled
             const exportJsonBtn = document.getElementById('export-json-btn');
             if (exportJsonBtn) {
-                exportJsonBtn.addEventListener('click', exportAnimationAsJSON);
+                // Disabled for now with coming soon state
+                // exportJsonBtn.addEventListener('click', exportAnimationAsJSON);
+                exportJsonBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log('Export JSON feature coming soon!');
+                });
             }
             
             const closeBtn = document.getElementById('close-btn');
