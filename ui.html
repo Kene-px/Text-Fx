@@ -767,6 +767,54 @@
             text-decoration: none;
         }
 
+        .beta-version {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .beta-text {
+            transition: color 0.2s ease;
+        }
+
+        .beta-version:hover .beta-text {
+            color: #FFFFFF;
+        }
+
+        .credits-tooltip {
+            position: absolute;
+            bottom: 25px;
+            left: 0;
+            background: #333;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 11px;
+            color: #9CA3AF;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(5px);
+            transition: all 0.2s ease;
+            z-index: 1000;
+            line-height: 1.4;
+        }
+
+        .beta-version:hover .credits-tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .credit-link {
+            color: #3B82F6 !important;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        .credit-link:hover {
+            color: #60A5FA !important;
+            text-decoration: underline;
+        }
+
         /* Animation classes */
         .animate-typing {
             overflow: hidden;
@@ -1306,7 +1354,12 @@
         </div>
 
         <div class="footer">
-            <span>Beta 1.0</span>
+            <span class="beta-version" id="beta-version">
+                <span class="beta-text">Beta 1.0</span>
+                <div class="credits-tooltip" id="credits-tooltip">
+                    <span>Designed by </span><a href="https://hellokene.com/" target="_blank" class="credit-link">kene</a><span>. Developed by </span><a href="https://sarah-adewale.netlify.app/" target="_blank" class="credit-link">sarah</a>
+                </div>
+            </span>
             <a href="#" id="feedback-link">Share feedback</a>
         </div>
     </div>
@@ -2904,16 +2957,19 @@
                         if (!animationState.isPlaying) return; // Check if still playing
                         
                         if (elements.previewText) {
-                            // Reset for next loop
+                            // Remove animation class but stay in final state (invisible)
                             elements.previewText.classList.remove('animate-scale-shrink');
-                            elements.previewText.style.transform = 'scale(1)';
-                            elements.previewText.style.opacity = '1';
+                            elements.previewText.style.transform = 'scale(0)';
+                            elements.previewText.style.opacity = '0';
                             
-                            // Wait a brief moment then restart the animation
+                            // Wait longer to show invisible state, then reset and restart
                             const loopTimeout = setTimeout(() => {
                                 if (!animationState.isPlaying) return; // Check if still playing
+                                // Now reset to visible state (State A) and restart
+                                elements.previewText.style.transform = 'scale(1)';
+                                elements.previewText.style.opacity = '1';
                                 animateScaleBySentence(text, duration, style);
-                            }, 200); // Brief pause between loops
+                            }, 800); // Longer pause to show the "shrunk" state
                             
                             window.scaleAnimationTimeouts.push(loopTimeout);
                         }
@@ -2937,79 +2993,82 @@
             // Optimized stagger timing for words
             const staggerDelay = Math.max(200, duration / words.length);
             
-            // Create document fragment for better performance
-            const fragment = document.createDocumentFragment();
+            // Calculate total time for all words to complete
+            const animDuration = Math.min(duration * 0.8, 1000);
+            const totalAnimationTime = (words.length - 1) * staggerDelay + animDuration;
             
-            // Calculate the total duration for all words to finish animating
-            const totalAnimationTime = (words.length - 1) * staggerDelay + Math.min(duration * 0.8, 1000);
-
-            words.forEach((word, index) => {
-                const span = document.createElement('span');
-                span.className = 'letter'; // Reuse letter class for styling
-                span.textContent = word;
-                span.style.display = 'inline-block';
-                span.style.transformOrigin = 'center';
+            if (style === 'scale-grow') {
+                // For scale-grow, start with empty text and progressively add words
+                elements.previewText.textContent = '';
+                elements.previewText.style.display = 'block';
                 
-                // Calculate delay based on direction
-                const delay = direction === 'forward' 
-                    ? index * staggerDelay 
-                    : (words.length - 1 - index) * staggerDelay;
-                
-                if (style === 'scale-grow') {
-                    // Set initial invisible state for grow
-                    span.style.transform = 'scale(0)';
-                    span.style.opacity = '0';
+                words.forEach((word, index) => {
+                    const delay = direction === 'forward' 
+                        ? index * staggerDelay 
+                        : (words.length - 1 - index) * staggerDelay;
                     
-                    // Apply grow animation with delay
-                    const timeout1 = setTimeout(() => {
-                        if (!animationState.isPlaying) return; // Check if still playing
-                        
-                        requestAnimationFrame(() => {
-                            span.classList.add('animate-scale-grow');
-                            span.style.animationDuration = `${Math.min(duration * 0.8, 1000)}ms`;
-                            
-                            // Ensure word remains visible after animation
-                            const timeout2 = setTimeout(() => {
-                                if (!animationState.isPlaying) return; // Check if still playing
-                                span.style.transform = 'scale(1)';
-                                span.style.opacity = '1';
-                            }, Math.min(duration * 0.8, 1000));
-                            
-                            window.scaleAnimationTimeouts.push(timeout2);
-                        });
-                    }, delay);
-                    
-                    window.scaleAnimationTimeouts.push(timeout1);
-                } else if (style === 'scale-shrink') {
-                    // Set initial visible state for shrink
-                    span.style.transform = 'scale(1)';
-                    span.style.opacity = '1';
-                    
-                    // Apply shrink animation with delay
                     const timeout = setTimeout(() => {
-                        if (!animationState.isPlaying) return; // Check if still playing
+                        if (!animationState.isPlaying) return;
                         
-                        requestAnimationFrame(() => {
-                            span.classList.add('animate-scale-shrink');
-                            span.style.animationDuration = `${Math.min(duration * 0.8, 1000)}ms`;
-                            
-                            // Text will disappear after animation - no need to reset
-                        });
+                        // Create span for the word
+                        const span = document.createElement('span');
+                        span.textContent = word + (index < words.length - 1 ? ' ' : '');
+                        span.style.display = 'inline-block';
+                        span.style.transformOrigin = 'center';
+                        
+                        // Add the word to preview
+                        elements.previewText.appendChild(span);
+                        
+                        // Start grow animation
+                        span.classList.add('animate-scale-grow');
+                        span.style.animationDuration = `${animDuration}ms`;
                     }, delay);
                     
                     window.scaleAnimationTimeouts.push(timeout);
-                }
-
-                fragment.appendChild(span);
+                });
+            } else if (style === 'scale-shrink') {
+                // For scale-shrink, start with full sentence and progressively remove words
+                elements.previewText.innerHTML = '';
+                elements.previewText.style.display = 'block';
                 
-                // Add space after each word (except the last one)
-                if (index < words.length - 1) {
-                    const space = document.createTextNode(' ');
-                    fragment.appendChild(space);
-                }
-            });
-
-            elements.previewText.appendChild(fragment);
+                // Create all word spans first (visible state) with separate spaces
+                const wordSpans = [];
+                words.forEach((word, index) => {
+                    const span = document.createElement('span');
+                    span.textContent = word;
+                    span.style.display = 'inline-block';
+                    span.style.transformOrigin = 'center';
+                    wordSpans.push(span);
+                    elements.previewText.appendChild(span);
+                    
+                    // Add space after word (except last word) - space stays visible
+                    if (index < words.length - 1) {
+                        const space = document.createTextNode(' ');
+                        elements.previewText.appendChild(space);
+                    }
+                });
+                
+                // Now animate each word to shrink out of view (spaces remain)
+                words.forEach((word, index) => {
+                    const delay = direction === 'forward' 
+                        ? index * staggerDelay 
+                        : (words.length - 1 - index) * staggerDelay;
+                    
+                    const timeout = setTimeout(() => {
+                        if (!animationState.isPlaying) return;
+                        
+                        const span = wordSpans[index];
+                        if (span) {
+                            // Start shrink animation (word disappears, space remains)
+                            span.classList.add('animate-scale-shrink');
+                            span.style.animationDuration = `${animDuration}ms`;
+                            span.style.animationFillMode = 'forwards'; // Keep final state (invisible)
+                        }
+                    }, delay);
+                    
+                    window.scaleAnimationTimeouts.push(timeout);
+                });
+            }
             
             // Schedule the next loop after all words have finished animating
             const loopTimeout = setTimeout(() => {
@@ -3060,11 +3119,11 @@
             elements.previewText.style.transformOrigin = 'center';
             elements.previewText.style.display = 'block';
             
-            // Apply the rotate animation - let CSS handle initial state
+            // Apply the rotate animation immediately 
             elements.previewText.classList.add('animate-rotate');
             elements.previewText.style.animationDuration = `${duration}ms`;
             
-            // Schedule next loop after animation completes (like scale animation)
+            // Schedule next loop after animation completes
             const timeout = setTimeout(() => {
                 if (!animationState.isPlaying) return; // Check if still playing
                 
@@ -3097,20 +3156,16 @@
 
             const words = text.split(' ');
             const staggerDelay = Math.max(200, duration / words.length);
-            const fragment = document.createDocumentFragment();
             
             // Calculate total time for all words to complete
             const animDuration = Math.min(duration * 0.8, 1000);
             const totalTime = (words.length - 1) * staggerDelay + animDuration;
 
+            // Start with empty text
+            elements.previewText.textContent = '';
+            elements.previewText.style.display = 'block';
+
             words.forEach((word, index) => {
-                const span = document.createElement('span');
-                span.className = 'letter';
-                span.textContent = word;
-                span.style.display = 'inline-block';
-                span.style.transformOrigin = 'center';
-                // Don't set initial transform/opacity - let CSS animation handle it
-                
                 const delay = direction === 'forward' 
                     ? index * staggerDelay 
                     : (words.length - 1 - index) * staggerDelay;
@@ -3118,20 +3173,28 @@
                 const timeout = setTimeout(() => {
                     if (!animationState.isPlaying) return;
                     
-                    // Apply animation directly - let CSS handle the transition
+                    // Create span for this word
+                    const span = document.createElement('span');
+                    span.className = 'letter';
+                    span.textContent = word;
+                    span.style.display = 'inline-block';
+                    span.style.transformOrigin = 'center';
+                    
+                    // Add space before word (except first word)
+                    if (elements.previewText.textContent.length > 0) {
+                        elements.previewText.appendChild(document.createTextNode(' '));
+                    }
+                    
+                    // Add the word to preview
+                    elements.previewText.appendChild(span);
+                    
+                    // Start animation immediately - let CSS handle initial state
                     span.classList.add('animate-rotate');
                     span.style.animationDuration = `${animDuration}ms`;
                 }, delay);
                 
                 window.rotateAnimationTimeouts.push(timeout);
-                fragment.appendChild(span);
-                
-                if (index < words.length - 1) {
-                    fragment.appendChild(document.createTextNode(' '));
-                }
             });
-
-            elements.previewText.appendChild(fragment);
             
             // Schedule next loop after all words complete (like scale word animation)
             const loopTimeout = setTimeout(() => {
