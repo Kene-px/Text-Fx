@@ -151,6 +151,7 @@ async function handleUIMessage(msg: PluginMessage) {
 async function createAnimationComponent(data: ComponentData) {
   try {
     const { text, animation } = data;
+    console.log(`🐛 DEBUG createAnimationComponent: text="${text}", animation=`, animation);
     
     // Create variants as separate components first
     const variants = await createAnimationVariants(text, animation);
@@ -326,15 +327,12 @@ async function createTextNodeForFrame(
       break;
     }
     case 'rotate': {
-      textNode.characters = text;
       if (typeBy === 'word') {
         applyWordRotateEffect(textNode, text, frameIndex, totalFrames, direction);
       } else {
-        // Note: Figma doesn't support rotation via API, so we'll simulate with scaling and opacity
-        const rotateScale = direction === 'forward'
-          ? Math.min(progress * 1.2, 1)
-          : Math.max(1 - progress * 1.2, 0.1);
-        textNode.opacity = Math.min(progress * 1.5, 1);
+        // Note: Figma doesn't support rotation via API, so we'll simulate different rotation directions
+        // using character revelation patterns and scaling
+        applyLetterRotateEffect(textNode, text, frameIndex, totalFrames, direction);
       }
       break;
     }
@@ -460,6 +458,36 @@ function applyWordScaleShrinkEffect(
   }
 }
 
+function applyLetterRotateEffect(
+  textNode: TextNode, 
+  text: string, 
+  frameIndex: number, 
+  totalFrames: number, 
+  direction: 'forward' | 'backwards'
+) {
+  const progress = frameIndex / (totalFrames - 1);
+  
+  if (direction === 'forward') {
+    // Forward rotation: characters appear left-to-right (clockwise)
+    const visibleLength = Math.floor(progress * text.length);
+    textNode.characters = text.substring(0, visibleLength);
+  } else {
+    // Backwards rotation: characters appear right-to-left (anti-clockwise)
+    const visibleLength = Math.floor(progress * text.length);
+    if (visibleLength === 0) {
+      textNode.characters = '';
+    } else {
+      // Build string from right-to-left: start with last character, add previous ones
+      const startIndex = text.length - visibleLength;
+      textNode.characters = text.substring(startIndex);
+    }
+  }
+  
+  // Apply common scaling and opacity effects
+  const scale = Math.min(progress * 1.2, 1);
+  textNode.opacity = Math.min(progress * 1.5, 1);
+}
+
 function applyWordRotateEffect(
   textNode: TextNode, 
   text: string, 
@@ -472,15 +500,33 @@ function applyWordRotateEffect(
     textNode.characters = '';
     textNode.opacity = 0;
   } else {
-    const wordIndex = direction === 'forward' 
-      ? Math.min(frameIndex - 1, words.length - 1)
-      : Math.max(words.length - frameIndex, 0);
-    
-    const visibleWords = direction === 'forward' 
-      ? words.slice(0, wordIndex + 1)
-      : words.slice(wordIndex);
-    
-    textNode.characters = visibleWords.join(' ');
+    if (direction === 'forward') {
+      // Forward: words appear left-to-right (hello → world!)
+      const wordIndex = Math.min(frameIndex - 1, words.length - 1);
+      const visibleWords = words.slice(0, wordIndex + 1);
+      textNode.characters = visibleWords.join(' ');
+    } else {
+      // Backwards: words appear from right to left, but text builds in correct order
+      // e.g., "world!" appears first, then "hello world!" (not "world! hello")
+      const totalVisibleWords = Math.min(frameIndex, words.length);
+      
+      // Determine which words should be visible (from right to left)
+      const visibleWordIndices = new Set<number>();
+      for (let i = 0; i < totalVisibleWords; i++) {
+        const wordIndex = words.length - 1 - i; // Start from rightmost
+        visibleWordIndices.add(wordIndex);
+      }
+      
+      // Build text in original order, but only include visible words
+      const visibleWords: string[] = [];
+      for (let i = 0; i < words.length; i++) {
+        if (visibleWordIndices.has(i)) {
+          visibleWords.push(words[i]);
+        }
+      }
+      
+      textNode.characters = visibleWords.join(' ');
+    }
     textNode.opacity = 1;
   }
 }
@@ -546,6 +592,10 @@ async function setupSimplePrototyping(variants: ComponentNode[], animation: Anim
 
     console.log(`Setting up simple prototyping for ${variants.length} variants`);
     
+    // Calculate timing between frames
+    const frameDelay = Math.max(animation.duration / variants.length, 300); // At least 300ms per frame
+    console.log(`🐛 DEBUG setupSimplePrototyping: duration=${animation.duration}, variants.length=${variants.length}, frameDelay=${frameDelay}`);
+    
     // Create minimal reaction format
     for (let i = 0; i < variants.length; i++) {
       const currentVariant = variants[i];
@@ -564,9 +614,12 @@ async function setupSimplePrototyping(variants: ComponentNode[], animation: Anim
           }
         }],
         trigger: {
-          type: 'ON_CLICK'
+          type: 'AFTER_TIMEOUT',
+          timeout: frameDelay / 1000  // Convert milliseconds to seconds for Figma API
         }
       };
+      
+      console.log(`🐛 DEBUG setupSimplePrototyping: Setting timeout=${frameDelay / 1000}s for variant ${i} (${currentVariant.name} -> ${nextVariant.name})`);
       
       await currentVariant.setReactionsAsync([reaction]);
     }
@@ -589,7 +642,7 @@ async function setupPrototypingInteractions(variants: ComponentNode[], animation
   const { duration, style, direction } = animationSettings;
   
   // Calculate timing between frames
-  const frameDelay = Math.max(duration * 1000 / variants.length, 300); // At least 300ms per frame
+  const frameDelay = Math.max(duration / variants.length, 300); // At least 300ms per frame
   
   // Determine transition type based on animation style
   const transitionType = style.includes('scale') || style === 'rotate' ? 'SMART_ANIMATE' : 'DISSOLVE';
@@ -653,7 +706,8 @@ async function setupPrototypingInteractions(variants: ComponentNode[], animation
           }
         }],
         trigger: {
-          type: 'ON_CLICK'
+          type: 'AFTER_TIMEOUT',
+          timeout: frameDelay / 1000  // Convert milliseconds to seconds for Figma API
         }
       };
       
@@ -731,7 +785,8 @@ async function triggerFirstInteraction(firstVariant: ComponentNode | InstanceNod
       const immediateReaction: Reaction = {
         actions: reactions[0].actions, // Use the same action as the timeout
         trigger: {
-          type: 'ON_CLICK' // Immediate trigger on click
+          type: 'AFTER_TIMEOUT',
+          timeout: 0
         }
       };
       
@@ -1006,11 +1061,49 @@ function getFrameText(
       if (typeBy === 'word') {
         const words = text.split(' ');
         if (frameIndex === 0) return '';
-        const wordIndex = Math.min(frameIndex - 1, words.length - 1);
-        return words.slice(0, wordIndex + 1).join(' ');
+        
+        if (direction === 'forward') {
+          // Forward: words appear left-to-right
+          const wordIndex = Math.min(frameIndex - 1, words.length - 1);
+          const visibleWords = words.slice(0, wordIndex + 1);
+          return visibleWords.join(' ');
+        } else {
+          // Backwards: words appear from right to left, but in correct order
+          const totalVisibleWords = Math.min(frameIndex, words.length);
+          
+          // Determine which words should be visible (from right to left)
+          const visibleWordIndices = new Set<number>();
+          for (let i = 0; i < totalVisibleWords; i++) {
+            const wordIndex = words.length - 1 - i; // Start from rightmost
+            visibleWordIndices.add(wordIndex);
+          }
+          
+          // Build text in original order, but only include visible words
+          const visibleWords: string[] = [];
+          for (let i = 0; i < words.length; i++) {
+            if (visibleWordIndices.has(i)) {
+              visibleWords.push(words[i]);
+            }
+          }
+          
+          return visibleWords.join(' ');
+        }
       } else {
-        const visibleLength = Math.floor(progress * text.length);
-        return text.substring(0, visibleLength);
+        // For letter-based rotation, create different character patterns for forward/backward
+        if (direction === 'forward') {
+          // Forward: characters appear left-to-right (clockwise)
+          const visibleLength = Math.floor(progress * text.length);
+          return text.substring(0, visibleLength);
+        } else {
+          // Backwards: characters appear right-to-left (anti-clockwise)  
+          const visibleLength = Math.floor(progress * text.length);
+          if (visibleLength === 0) {
+            return '';
+          } else {
+            const startIndex = text.length - visibleLength;
+            return text.substring(startIndex);
+          }
+        }
       }
       
     default:

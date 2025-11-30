@@ -292,13 +292,20 @@
             background: #212121;
             border: 1px solid #555;
             border-radius: 6px;
-            padding: 6px 4px;
+            padding: 6px 20px 6px 8px;
             color: #fcfcfc;
             font-size: 13px;
             font-family: inherit;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23fcfcfc' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 4px center;
+            background-repeat: no-repeat;
+            background-size: 16px 16px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
         }
         .select-input--small {
-            width: 73px;
+            width: 85px;
         }
 
         .select-input:focus {
@@ -521,7 +528,7 @@
             color: #fcfcfc;
             font-size: 13px;
             font-family: inherit;
-            width: 80px;
+            width: 90px;
             -moz-appearance: textfield;
         }
 
@@ -535,7 +542,7 @@
 
         .duration-arrows { 
             position: absolute; 
-            right: 4px; 
+            right: 10px; 
             top: 50%; 
             transform: translateY(-50%); 
             display: flex; 
@@ -952,8 +959,17 @@
             animation: rotate 1s ease-in-out;
         }
 
+        .animate-rotate-backwards {
+            animation: rotate-backwards 1s ease-in-out;
+        }
+
         @keyframes rotate {
             from { transform: rotate(-180deg) scale(0); }
+            to { transform: rotate(0deg) scale(1); }
+        }
+
+        @keyframes rotate-backwards {
+            from { transform: rotate(180deg) scale(0); }
             to { transform: rotate(0deg) scale(1); }
         }
 
@@ -1290,7 +1306,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="control-group">
+                <div class="control-group" id="direction-control">
                     <label class="control-label">Direction</label>
                     <div class="radio-group">
                         <label class="radio-option">
@@ -2242,6 +2258,9 @@
             // Initialize the type-by label with default style
             updateTypeByLabel('typing');
             
+            // Initialize direction section visibility based on default style
+            handleStyleChange();
+            
             updateUI();
             
             // Request current selection from Figma
@@ -3098,14 +3117,14 @@
 
             if (typeBy === 'letter') {
                 // Rotate by sentence - whole text rotates at once
-                animateRotateBySentence(text, duration, style);
+                animateRotateBySentence(text, duration, style, direction);
             } else {
                 // Rotate by word - each word rotates as a unit
                 animateRotateByWord(text, direction, duration, style);
             }
         }
 
-        function animateRotateBySentence(text, duration, style) {
+        function animateRotateBySentence(text, duration, style, direction) {
             const elements = getDOMElements();
             if (!elements.previewText) return;
 
@@ -3119,8 +3138,9 @@
             elements.previewText.style.transformOrigin = 'center';
             elements.previewText.style.display = 'block';
             
-            // Apply the rotate animation immediately 
-            elements.previewText.classList.add('animate-rotate');
+            // Apply the correct rotate animation based on direction
+            const rotateClass = direction === 'backwards' ? 'animate-rotate-backwards' : 'animate-rotate';
+            elements.previewText.classList.add(rotateClass);
             elements.previewText.style.animationDuration = `${duration}ms`;
             
             // Schedule next loop after animation completes
@@ -3128,15 +3148,15 @@
                 if (!animationState.isPlaying) return; // Check if still playing
                 
                 if (elements.previewText) {
-                    // Reset for next loop
-                    elements.previewText.classList.remove('animate-rotate');
+                    // Reset for next loop - remove both possible rotate classes
+                    elements.previewText.classList.remove('animate-rotate', 'animate-rotate-backwards');
                     elements.previewText.style.transform = '';
                     elements.previewText.style.opacity = '';
                     
                     // Wait a brief moment then restart the animation
                     const loopTimeout = setTimeout(() => {
                         if (!animationState.isPlaying) return; // Check if still playing
-                        animateRotateBySentence(text, duration, style);
+                        animateRotateBySentence(text, duration, style, direction);
                     }, 200); // Brief pause between loops
                     
                     window.rotateAnimationTimeouts.push(loopTimeout);
@@ -3165,36 +3185,75 @@
             elements.previewText.textContent = '';
             elements.previewText.style.display = 'block';
 
-            words.forEach((word, index) => {
-                const delay = direction === 'forward' 
-                    ? index * staggerDelay 
-                    : (words.length - 1 - index) * staggerDelay;
-                
-                const timeout = setTimeout(() => {
-                    if (!animationState.isPlaying) return;
+            if (direction === 'forward') {
+                // Forward: words appear left-to-right and are added in order
+                words.forEach((word, index) => {
+                    const delay = index * staggerDelay;
                     
-                    // Create span for this word
+                    const timeout = setTimeout(() => {
+                        if (!animationState.isPlaying) return;
+                        
+                        // Create span for this word
+                        const span = document.createElement('span');
+                        span.className = 'letter';
+                        span.textContent = word;
+                        span.style.display = 'inline-block';
+                        span.style.transformOrigin = 'center';
+                        
+                        // Add space before word (except first word)
+                        if (elements.previewText.textContent.length > 0) {
+                            elements.previewText.appendChild(document.createTextNode(' '));
+                        }
+                        
+                        // Add the word to preview
+                        elements.previewText.appendChild(span);
+                        
+                        // Start animation immediately
+                        span.classList.add('animate-rotate');
+                        span.style.animationDuration = `${animDuration}ms`;
+                    }, delay);
+                    
+                    window.rotateAnimationTimeouts.push(timeout);
+                });
+            } else {
+                // Backwards: words animate from right-to-left, but maintain correct positions
+                // Pre-create all word spans in correct positions, but make them invisible
+                const wordSpans = [];
+                for (let i = 0; i < words.length; i++) {
                     const span = document.createElement('span');
                     span.className = 'letter';
-                    span.textContent = word;
+                    span.textContent = words[i];
                     span.style.display = 'inline-block';
                     span.style.transformOrigin = 'center';
+                    span.style.opacity = '0'; // Start invisible
                     
                     // Add space before word (except first word)
-                    if (elements.previewText.textContent.length > 0) {
+                    if (i > 0) {
                         elements.previewText.appendChild(document.createTextNode(' '));
                     }
                     
-                    // Add the word to preview
                     elements.previewText.appendChild(span);
-                    
-                    // Start animation immediately - let CSS handle initial state
-                    span.classList.add('animate-rotate');
-                    span.style.animationDuration = `${animDuration}ms`;
-                }, delay);
+                    wordSpans.push(span);
+                }
                 
-                window.rotateAnimationTimeouts.push(timeout);
-            });
+                // Now animate words from right to left
+                words.forEach((word, index) => {
+                    const delay = (words.length - 1 - index) * staggerDelay;
+                    
+                    const timeout = setTimeout(() => {
+                        if (!animationState.isPlaying) return;
+                        
+                        const span = wordSpans[index];
+                        span.style.opacity = '1'; // Make visible
+                        
+                        // Start animation immediately
+                        span.classList.add('animate-rotate-backwards');
+                        span.style.animationDuration = `${animDuration}ms`;
+                    }, delay);
+                    
+                    window.rotateAnimationTimeouts.push(timeout);
+                });
+            }
             
             // Schedule next loop after all words complete (like scale word animation)
             const loopTimeout = setTimeout(() => {
@@ -3272,20 +3331,7 @@
                 // Show success feedback with prototype information
                 showPrototypeSuccessMessage();
                 
-                // Optional: Update the UI to reflect that component is prototyped
-                const createBtn = document.getElementById('create-btn');
-                const btnText = document.getElementById('create-btn-text');
-                
-                if (createBtn && btnText) {
-                    createBtn.style.background = '#00D084';
-                    btnText.textContent = 'Component Created & Prototyped!';
-                    
-                    // Reset button after a delay
-                    setTimeout(() => {
-                        btnText.textContent = 'Create component';
-                        createBtn.style.background = '';
-                    }, 3000);
-                }
+                // Note: Removed button success message - only showing at top now
             } else if (!data.success) {
                 // Handle error case
                 console.error('Component creation failed:', data.error);
@@ -3302,7 +3348,7 @@
         function showPrototypeSuccessMessage() {
             // Create a temporary success indicator
             const successIndicator = document.createElement('div');
-            successIndicator.innerHTML = '✓ Component prototyped and ready to animate!';
+            successIndicator.innerHTML = 'Component created and prototyped!';
             successIndicator.style.cssText = `
                 position: fixed;
                 top: 10px;
@@ -3397,6 +3443,24 @@
         }
 
         function handleStyleChange() {
+            // Hide direction section for scale animations
+            const styleSelect = document.getElementById('style-select');
+            const directionControl = document.getElementById('direction-control');
+            
+            if (styleSelect && directionControl) {
+                const selectedStyle = styleSelect.value;
+                const isScaleAnimation = selectedStyle === 'scale-grow' || selectedStyle === 'scale-shrink';
+                
+                if (isScaleAnimation) {
+                    directionControl.style.display = 'none';
+                } else {
+                    directionControl.style.display = 'block';
+                }
+                
+                // Resize plugin window to accommodate the changed content height
+                resizePluginToContent();
+            }
+            
             updateAnimation();
         }
         
