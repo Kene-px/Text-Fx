@@ -1279,15 +1279,10 @@
                             <div class="select-tooltip" id="select-tooltip">Coming soon</div>
                             <select class="select-input select-input--small" id="style-select">
                                 <option value="typing">Typing</option>
-                                <option value="scale-grow">Scale Grow</option>
-                                <option value="scale-shrink">Scale Shrink</option>
-                                <option value="rotate">Rotate</option>
-                                <option value="fade-in" disabled>Fade In </option>
-                                <option value="fade-out" disabled>Fade Out </option>
-                                <option value="slide-left" disabled>Slide Left </option>
-                                <option value="slide-right" disabled>Slide Right </option>
-                                <option value="slide-up" disabled>Slide Up </option>
-                                <option value="slide-down" disabled>Slide Down </option>
+                                <option value="scale">Scale</option>
+                                <option value="rotate" disabled>Rotate</option>
+                                <option value="fade" disabled>Fade</option>
+                                <option value="slide" disabled>Slide</option>
                             </select>
                         </div>
                     </div>
@@ -1307,15 +1302,15 @@
                     </div>
                 </div>
                 <div class="control-group" id="direction-control">
-                    <label class="control-label">Direction</label>
+                    <label class="control-label" id="direction-label">Direction</label>
                     <div class="radio-group">
                         <label class="radio-option">
                             <input type="radio" name="direction" value="forward" checked>
-                            Forward
+                            <span class="radio-text">Forward</span>
                         </label>
                         <label class="radio-option">
                             <input type="radio" name="direction" value="backwards">
-                            Backwards
+                            <span class="radio-text">Backwards</span>
                         </label>
                     </div>
                 </div>
@@ -1759,7 +1754,7 @@
             const { style, typeBy } = animationSettings;
             
             // For scale and rotate animations with word-by-word, ensure complete text is visible
-            if (((style === 'scale-grow' || style === 'scale-shrink') && typeBy === 'word') ||
+            if ((style === 'scale' && typeBy === 'word') ||
                 (style === 'rotate' && typeBy === 'word')) {
                 // Clear any animation classes and reset to show complete text
                 elements.previewText.innerHTML = '';
@@ -2761,9 +2756,11 @@
             if (style === 'typing') {
                 // Special handling for typing animation
                 animateTyping(text, typeBy, direction, duration);
-            } else if (style === 'scale-grow' || style === 'scale-shrink') {
+            } else if (style === 'scale') {
                 // Special handling for scale animations
-                animateScale(text, typeBy, direction, duration, style);
+                // Map direction to scale type: forward = grow, backwards = shrink
+                const scaleType = direction === 'forward' ? 'scale-grow' : 'scale-shrink';
+                animateScale(text, typeBy, direction, duration, scaleType);
             } else if (style === 'rotate') {
                 // Special handling for rotate animations
                 animateRotate(text, typeBy, direction, duration, style);
@@ -2806,8 +2803,10 @@
                         if (direction === 'forward') {
                             displayedText += chars[charIndex];
                         } else {
-                            // For backwards, we build from the end
-                            displayedText = text.substring(0, text.length - charIndex);
+                            // For backwards, reveal letters from right to left
+                            const visibleLength = charIndex + 1;
+                            const startIndex = Math.max(0, text.length - visibleLength);
+                            displayedText = text.substring(startIndex);
                         }
                         
                         textContainer.textContent = displayedText;
@@ -2829,8 +2828,7 @@
             } else {
                 // Word-by-word typing
                 const words = text.split(' ');
-                const wordsToShow = direction === 'forward' ? words : words.reverse();
-                const typingSpeed = Math.max(200, duration / wordsToShow.length); // Minimum 200ms per word
+                const typingSpeed = Math.max(200, duration / words.length); // Minimum 200ms per word
                 
                 // Create a container for the text and cursor
                 const textContainer = document.createElement('span');
@@ -2845,11 +2843,14 @@
                 let wordIndex = 0;
                 
                 function typeNextWord() {
-                    if (wordIndex < wordsToShow.length) {
+                    if (wordIndex < words.length) {
                         if (direction === 'forward') {
                             textContainer.textContent = words.slice(0, wordIndex + 1).join(' ');
                         } else {
-                            textContainer.textContent = words.slice(words.length - wordIndex - 1).join(' ');
+                            // For backwards, reveal words from right to left but in correct order
+                            const wordsToShow = wordIndex + 1;
+                            const startWordIndex = Math.max(0, words.length - wordsToShow);
+                            textContainer.textContent = words.slice(startWordIndex).join(' ');
                         }
                         
                         wordIndex++;
@@ -3031,12 +3032,18 @@
                         
                         // Create span for the word
                         const span = document.createElement('span');
-                        span.textContent = word + (index < words.length - 1 ? ' ' : '');
+                        span.textContent = word;
                         span.style.display = 'inline-block';
                         span.style.transformOrigin = 'center';
                         
                         // Add the word to preview
                         elements.previewText.appendChild(span);
+                        
+                        // Add space after word (except last word)
+                        if (index < words.length - 1) {
+                            const space = document.createTextNode(' ');
+                            elements.previewText.appendChild(space);
+                        }
                         
                         // Start grow animation
                         span.classList.add('animate-scale-grow');
@@ -3068,10 +3075,11 @@
                 });
                 
                 // Now animate each word to shrink out of view (spaces remain)
+                // For shrink animation, we want last word to disappear first, then work backwards
                 words.forEach((word, index) => {
                     const delay = direction === 'forward' 
-                        ? index * staggerDelay 
-                        : (words.length - 1 - index) * staggerDelay;
+                        ? (words.length - 1 - index) * staggerDelay  // Last word first (reversed)
+                        : index * staggerDelay;
                     
                     const timeout = setTimeout(() => {
                         if (!animationState.isPlaying) return;
@@ -3412,28 +3420,23 @@
             // Map animation styles to their corresponding action words
             const styleLabels = {
                 'typing': 'Type by',
-                'fade-in': 'Fade by',
-                'fade-out': 'Fade by', 
-                'slide-left': 'Slide by',
-                'slide-right': 'Slide by',
-                'slide-up': 'Slide by',
-                'slide-down': 'Slide by',
-                'scale-grow': 'Scale by',
-                'scale-shrink': 'Scale by',
+                'fade': 'Fade by',
+                'slide': 'Slide by',
+                'scale': 'Scale by',
                 'rotate': 'Rotate by'
             };
             
             // Special handling for scale and rotate animations - change options to Sentence/Word
-            const radioContainer = document.querySelector('.radio-group');
-            if ((style === 'scale-grow' || style === 'scale-shrink' || style === 'rotate') && radioContainer) {
-                const letterLabel = radioContainer.querySelector('label:first-child .radio-text');
-                const wordLabel = radioContainer.querySelector('label:last-child .radio-text');
+            const typeByRadioContainer = document.querySelector('input[name="type-by"]').closest('.radio-group');
+            if ((style === 'scale' || style === 'rotate') && typeByRadioContainer) {
+                const letterLabel = typeByRadioContainer.querySelector('label:first-child .radio-text');
+                const wordLabel = typeByRadioContainer.querySelector('label:last-child .radio-text');
                 if (letterLabel) letterLabel.textContent = 'Sentence';
                 if (wordLabel) wordLabel.textContent = 'Word';
-            } else if (radioContainer) {
+            } else if (typeByRadioContainer) {
                 // Reset to default for other animations
-                const letterLabel = radioContainer.querySelector('label:first-child .radio-text');
-                const wordLabel = radioContainer.querySelector('label:last-child .radio-text');
+                const letterLabel = typeByRadioContainer.querySelector('label:first-child .radio-text');
+                const wordLabel = typeByRadioContainer.querySelector('label:last-child .radio-text');
                 if (letterLabel) letterLabel.textContent = 'Letter';
                 if (wordLabel) wordLabel.textContent = 'Word';
             }
@@ -3443,18 +3446,45 @@
         }
 
         function handleStyleChange() {
-            // Hide direction section for scale animations
             const styleSelect = document.getElementById('style-select');
             const directionControl = document.getElementById('direction-control');
+            const directionLabel = document.getElementById('direction-label');
             
-            if (styleSelect && directionControl) {
+            if (styleSelect && directionControl && directionLabel) {
                 const selectedStyle = styleSelect.value;
-                const isScaleAnimation = selectedStyle === 'scale-grow' || selectedStyle === 'scale-shrink';
+                const isScaleAnimation = selectedStyle === 'scale';
                 
                 if (isScaleAnimation) {
-                    directionControl.style.display = 'none';
-                } else {
+                    // For scale animations, change to "Type" and show Grow/Shrink options
+                    directionLabel.textContent = 'Type';
                     directionControl.style.display = 'block';
+                    
+                    // Update radio options to show Grow/Shrink
+                    const radioTexts = directionControl.querySelectorAll('.radio-text');
+                    const forwardRadio = directionControl.querySelector('input[value="forward"]');
+                    const backwardRadio = directionControl.querySelector('input[value="backwards"]');
+                    
+                    if (radioTexts.length >= 2) {
+                        radioTexts[0].textContent = 'Grow';
+                        radioTexts[1].textContent = 'Shrink';
+                    }
+                    
+                    // Set default to Grow (forward)
+                    if (forwardRadio) {
+                        forwardRadio.checked = true;
+                        animationSettings.direction = 'forward';
+                    }
+                } else {
+                    // For other animations, use normal Direction with Forward/Backward
+                    directionLabel.textContent = 'Direction';
+                    directionControl.style.display = 'block';
+                    
+                    // Restore radio options to show Forward/Backward
+                    const radioTexts = directionControl.querySelectorAll('.radio-text');
+                    if (radioTexts.length >= 2) {
+                        radioTexts[0].textContent = 'Forward';
+                        radioTexts[1].textContent = 'Backward';
+                    }
                 }
                 
                 // Resize plugin window to accommodate the changed content height
@@ -3474,7 +3504,7 @@
             
             // Only show tooltip if somehow a disabled option gets selected (shouldn't happen)
             elements.styleSelect.addEventListener('change', () => {
-                const disabledStyles = ['fade-in', 'fade-out', 'slide-left', 'slide-right', 'slide-up', 'slide-down'];
+                const disabledStyles = ['fade', 'slide'];
                 if (disabledStyles.includes(elements.styleSelect.value)) {
                     // Briefly show tooltip to explain why selection was reverted
                     elements.selectTooltip.classList.add('show');

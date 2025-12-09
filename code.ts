@@ -245,8 +245,6 @@ function calculateFrameCount(
     case 'slide-down':
       return typeBy === 'letter' ? text.length + 1 : text.split(' ').length + 1;
     case 'scale':
-    case 'scale-grow':
-    case 'scale-shrink':
       return typeBy === 'letter' ? text.length + 1 : text.split(' ').length + 1;
     case 'rotate':
       return typeBy === 'letter' ? text.length + 1 : text.split(' ').length + 1;
@@ -288,33 +286,32 @@ async function createTextNodeForFrame(
     }
     case 'scale': {
       textNode.characters = text;
-      const scale = typeBy === 'letter' 
-        ? applyLetterScale(frameIndex, totalFrames)
-        : Math.min(progress * 1.3, 1);
-      textNode.resize(textNode.width * scale, textNode.height * scale);
-      break;
-    }
-    case 'scale-grow': {
-      textNode.characters = text;
+      // Map direction to scale type: forward = grow, backwards = shrink
+      const isGrow = direction === 'forward';
+      
       if (typeBy === 'word') {
-        applyWordScaleGrowEffect(textNode, text, frameIndex, totalFrames, direction);
+        if (isGrow) {
+          applyWordScaleGrowEffect(textNode, text, frameIndex, totalFrames, direction);
+        } else {
+          applyWordScaleShrinkEffect(textNode, text, frameIndex, totalFrames, direction);
+        }
       } else {
-        const scale = direction === 'forward' 
-          ? Math.min(progress * 1.2, 1)
-          : Math.max(1 - progress * 1.2, 0.1);
-        textNode.opacity = Math.min(progress * 1.5, 1);
-      }
-      break;
-    }
-    case 'scale-shrink': {
-      textNode.characters = text;
-      if (typeBy === 'word') {
-        applyWordScaleShrinkEffect(textNode, text, frameIndex, totalFrames, direction);
-      } else {
-        const scale = direction === 'forward' 
-          ? Math.max(1 - progress * 1.2, 0.1)
-          : Math.min(progress * 1.2, 1);
-        textNode.opacity = Math.max(1 - progress * 1.2, 0.1);
+        // For letter-based scaling, use fontSize to scale the text
+        const baseFontSize = 16;
+        
+        if (isGrow) {
+          // Scale grow effect - start small and grow to normal size
+          const scale = Math.min(progress * 1.2, 1);
+          textNode.opacity = Math.min(progress * 1.5, 1);
+          // Scale the font size instead of dimensions
+          textNode.fontSize = Math.max(baseFontSize * scale, 1); // Minimum 1px font
+        } else {
+          // Scale shrink effect - start normal and shrink down  
+          const scale = Math.max(1 - progress * 1.2, 0.1);
+          textNode.opacity = Math.max(1 - progress * 1.2, 0.1);
+          // Scale the font size instead of dimensions
+          textNode.fontSize = Math.max(baseFontSize * scale, 1); // Minimum 1px font
+        }
       }
       break;
     }
@@ -341,7 +338,10 @@ async function createTextNodeForFrame(
     }
   }
   // Set basic text properties
-  textNode.fontSize = 16;
+  // Only set default fontSize if it's not a scale or rotate animation (they set their own fontSize)
+  if (style !== 'scale' && style !== 'rotate') {
+    textNode.fontSize = 16;
+  }
   const textColor = hexToRgb(animation.color);
   textNode.fills = [{ type: 'SOLID', color: textColor }];
   return textNode;
@@ -355,20 +355,40 @@ function applyTypingEffect(
   direction: 'forward' | 'backwards'
 ) {
   if (typeBy === 'letter') {
-    const visibleLength = direction === 'forward' 
-      ? frameIndex 
-      : Math.max(0, text.length - frameIndex);
-    textNode.characters = text.substring(0, visibleLength);
+    if (direction === 'forward') {
+      // Forward: reveal letters left to right
+      textNode.characters = text.substring(0, frameIndex);
+    } else {
+      // Backward: reveal letters right to left, building from the end
+      const visibleLength = frameIndex;
+      if (visibleLength === 0) {
+        textNode.characters = '';
+      } else {
+        // Show the rightmost 'visibleLength' characters
+        const startIndex = Math.max(0, text.length - visibleLength);
+        textNode.characters = text.substring(startIndex);
+      }
+    }
   } else {
     // Word-based typing
     const words = text.split(' ');
     if (frameIndex === 0) {
       textNode.characters = '';
     } else {
-      const visibleWords = direction === 'forward' 
-        ? words.slice(0, frameIndex)
-        : words.slice(Math.max(0, words.length - frameIndex));
-      textNode.characters = visibleWords.join(' ');
+      if (direction === 'forward') {
+        // Forward: show words left to right
+        const visibleWords = words.slice(0, frameIndex);
+        textNode.characters = visibleWords.join(' ');
+      } else {
+        // Backward: reveal words right to left, starting from the last word
+        const wordsToShow = frameIndex;
+        const totalWords = words.length;
+        
+        // Show only the rightmost 'wordsToShow' words in their correct order
+        const startWordIndex = Math.max(0, totalWords - wordsToShow);
+        const visibleWords = words.slice(startWordIndex);
+        textNode.characters = visibleWords.join(' ');
+      }
     }
   }
 }
@@ -428,8 +448,11 @@ function applyWordScaleGrowEffect(
       ? words.slice(0, wordIndex + 1)
       : words.slice(wordIndex);
     
+    // Ensure proper spacing between words
     textNode.characters = visibleWords.join(' ');
     textNode.opacity = 1;
+    
+    console.log(`🐛 DEBUG applyWordScaleGrowEffect: frameIndex=${frameIndex}, wordIndex=${wordIndex}, visibleWords=[${visibleWords.join(', ')}], result="${textNode.characters}"`);
   }
 }
 
@@ -445,16 +468,17 @@ function applyWordScaleShrinkEffect(
     textNode.characters = '';
     textNode.opacity = 0;
   } else {
-    const remainingWords = direction === 'forward' 
-      ? Math.max(words.length - frameIndex, 0)
-      : Math.min(frameIndex + 1, words.length);
+    // For shrink: start with all words, then remove from the end (right to left)
+    // Each frame removes more words from the end
+    const wordsToRemove = frameIndex;
+    const remainingWords = Math.max(words.length - wordsToRemove, 0);
     
-    const visibleWords = direction === 'forward' 
-      ? words.slice(0, remainingWords)
-      : words.slice(0, remainingWords);
+    const visibleWords = words.slice(0, remainingWords);
     
     textNode.characters = visibleWords.join(' ');
     textNode.opacity = 1;
+    
+    console.log(`🐛 DEBUG applyWordScaleShrinkEffect: frameIndex=${frameIndex}, wordsToRemove=${wordsToRemove}, remainingWords=${remainingWords}, visibleWords=[${visibleWords.join(', ')}], result="${textNode.characters}"`);
   }
 }
 
@@ -467,25 +491,62 @@ function applyLetterRotateEffect(
 ) {
   const progress = frameIndex / (totalFrames - 1);
   
+  // Keep consistent font size (no scaling like scale animation)
+  textNode.fontSize = 16;
+  
   if (direction === 'forward') {
-    // Forward rotation: characters appear left-to-right (clockwise)
-    const visibleLength = Math.floor(progress * text.length);
-    textNode.characters = text.substring(0, visibleLength);
-  } else {
-    // Backwards rotation: characters appear right-to-left (anti-clockwise)
-    const visibleLength = Math.floor(progress * text.length);
-    if (visibleLength === 0) {
-      textNode.characters = '';
+    // Forward rotation: simulate clockwise spiral - characters appear in a circular pattern
+    // Instead of straight left-to-right, use a pattern that simulates rotation
+    if (progress < 0.5) {
+      // First half: characters appear from center outward in alternating pattern
+      const visibleCount = Math.floor(progress * 2 * text.length);
+      const centerIndex = Math.floor(text.length / 2);
+      let visibleText = '';
+      
+      for (let i = 0; i < text.length; i++) {
+        const distanceFromCenter = Math.abs(i - centerIndex);
+        const shouldShow = distanceFromCenter * 2 <= visibleCount;
+        visibleText += shouldShow ? text[i] : ' ';
+      }
+      textNode.characters = visibleText;
+      textNode.opacity = 0.3 + (progress * 1.4);
     } else {
-      // Build string from right-to-left: start with last character, add previous ones
-      const startIndex = text.length - visibleLength;
-      textNode.characters = text.substring(startIndex);
+      // Second half: fill in remaining characters to complete rotation
+      const fillProgress = (progress - 0.5) * 2;
+      const totalVisible = Math.floor(0.5 * text.length + fillProgress * 0.5 * text.length);
+      
+      let visibleText = '';
+      for (let i = 0; i < text.length; i++) {
+        const position = (i + Math.floor(text.length / 2)) % text.length;
+        const shouldShow = position < totalVisible;
+        visibleText += shouldShow ? text[i] : ' ';
+      }
+      textNode.characters = visibleText;
+      textNode.opacity = Math.min(1, 0.8 + fillProgress * 0.4);
+    }
+  } else {
+    // Backwards rotation: simulate counter-clockwise spiral - characters disappear in circular pattern
+    const reverseProgress = 1 - progress;
+    
+    if (reverseProgress > 0.5) {
+      // First half: normal text
+      textNode.characters = text;
+      textNode.opacity = reverseProgress;
+    } else {
+      // Second half: characters disappear in spiral pattern
+      const fadeProgress = reverseProgress * 2;
+      const centerIndex = Math.floor(text.length / 2);
+      let visibleText = '';
+      
+      for (let i = 0; i < text.length; i++) {
+        const distanceFromCenter = Math.abs(i - centerIndex);
+        const shouldShow = distanceFromCenter * 2 <= fadeProgress * text.length;
+        visibleText += shouldShow ? text[i] : ' ';
+      }
+      textNode.characters = visibleText;
+      textNode.opacity = Math.max(0.2, fadeProgress);
     }
   }
-  
-  // Apply common scaling and opacity effects
-  const scale = Math.min(progress * 1.2, 1);
-  textNode.opacity = Math.min(progress * 1.5, 1);
 }
 
 function applyWordRotateEffect(
@@ -495,39 +556,74 @@ function applyWordRotateEffect(
   totalFrames: number, 
   direction: 'forward' | 'backwards'
 ) {
+  const progress = frameIndex / (totalFrames - 1);
   const words = text.split(' ');
-  if (frameIndex === 0) {
-    textNode.characters = '';
-    textNode.opacity = 0;
-  } else {
-    if (direction === 'forward') {
-      // Forward: words appear left-to-right (hello → world!)
-      const wordIndex = Math.min(frameIndex - 1, words.length - 1);
-      const visibleWords = words.slice(0, wordIndex + 1);
-      textNode.characters = visibleWords.join(' ');
+  
+  // Keep consistent font size (no scaling like scale animation)
+  textNode.fontSize = 16;
+  
+  if (direction === 'forward') {
+    // Forward rotation: words appear in a spiral pattern (clockwise)
+    // Simulate rotation by showing words in a circular pattern, not linear
+    if (progress < 0.3) {
+      // Phase 1: Center word appears first
+      const centerIndex = Math.floor(words.length / 2);
+      const visibleWords = words.map((word, index) => {
+        return index === centerIndex ? word : '';
+      });
+      textNode.characters = visibleWords.join(' ').trim();
+      textNode.opacity = 0.4 + (progress * 2);
+    } else if (progress < 0.7) {
+      // Phase 2: Words spiral outward from center (alternating pattern)
+      const spiralProgress = (progress - 0.3) / 0.4;
+      const maxDistance = Math.floor(words.length / 2);
+      const currentDistance = Math.floor(spiralProgress * maxDistance);
+      const centerIndex = Math.floor(words.length / 2);
+      
+      const visibleWords = words.map((word, index) => {
+        const distance = Math.abs(index - centerIndex);
+        return distance <= currentDistance ? word : '';
+      });
+      textNode.characters = visibleWords.join(' ').trim();
+      textNode.opacity = 0.6 + (spiralProgress * 0.3);
     } else {
-      // Backwards: words appear from right to left, but text builds in correct order
-      // e.g., "world!" appears first, then "hello world!" (not "world! hello")
-      const totalVisibleWords = Math.min(frameIndex, words.length);
-      
-      // Determine which words should be visible (from right to left)
-      const visibleWordIndices = new Set<number>();
-      for (let i = 0; i < totalVisibleWords; i++) {
-        const wordIndex = words.length - 1 - i; // Start from rightmost
-        visibleWordIndices.add(wordIndex);
-      }
-      
-      // Build text in original order, but only include visible words
-      const visibleWords: string[] = [];
-      for (let i = 0; i < words.length; i++) {
-        if (visibleWordIndices.has(i)) {
-          visibleWords.push(words[i]);
-        }
-      }
-      
-      textNode.characters = visibleWords.join(' ');
+      // Phase 3: Complete the rotation - show all words
+      textNode.characters = text;
+      textNode.opacity = Math.min(1, 0.9 + ((progress - 0.7) * 2));
     }
-    textNode.opacity = 1;
+  } else {
+    // Backwards rotation: words disappear in spiral pattern (counter-clockwise)
+    const reverseProgress = 1 - progress;
+    
+    if (reverseProgress > 0.7) {
+      // Phase 1: All words visible
+      textNode.characters = text;
+      textNode.opacity = reverseProgress + 0.1;
+    } else if (reverseProgress > 0.3) {
+      // Phase 2: Words disappear spiraling inward to center
+      const spiralProgress = (reverseProgress - 0.3) / 0.4;
+      const maxDistance = Math.floor(words.length / 2);
+      const keepDistance = Math.floor(spiralProgress * maxDistance);
+      const centerIndex = Math.floor(words.length / 2);
+      
+      const visibleWords = words.map((word, index) => {
+        const distance = Math.abs(index - centerIndex);
+        return distance <= keepDistance ? word : '';
+      });
+      textNode.characters = visibleWords.join(' ').trim();
+      textNode.opacity = Math.max(0.3, spiralProgress * 1.2);
+    } else {
+      // Phase 3: Only center word remains, then disappears
+      const finalProgress = reverseProgress / 0.3;
+      if (finalProgress > 0.5 && words.length > 0) {
+        const centerWord = words[Math.floor(words.length / 2)];
+        textNode.characters = centerWord;
+        textNode.opacity = finalProgress;
+      } else {
+        textNode.characters = '';
+        textNode.opacity = 0;
+      }
+    }
   }
 }
 
@@ -650,10 +746,8 @@ async function setupPrototypingInteractions(variants: ComponentNode[], animation
   // Determine easing based on animation style
   const getEasing = (animStyle: string): { type: 'EASE_IN' | 'EASE_OUT' | 'EASE_IN_AND_OUT' | 'LINEAR' } => {
     switch (animStyle) {
-      case 'scale-grow':
+      case 'scale':
         return { type: 'EASE_OUT' };
-      case 'scale-shrink':
-        return { type: 'EASE_IN' };
       case 'typing':
         return { type: 'LINEAR' };
       case 'rotate':
@@ -1046,8 +1140,7 @@ function getFrameText(
         return text;
       }
       
-    case 'scale-grow':
-    case 'scale-shrink':
+    case 'scale':
       if (typeBy === 'word') {
         const words = text.split(' ');
         if (frameIndex === 0) return '';
