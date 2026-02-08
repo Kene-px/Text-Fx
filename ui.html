@@ -3056,7 +3056,7 @@
                 // For scale-shrink, start with full sentence and progressively remove words
                 elements.previewText.innerHTML = '';
                 elements.previewText.style.display = 'block';
-                
+
                 // Create all word spans first (visible state) with separate spaces
                 const wordSpans = [];
                 words.forEach((word, index) => {
@@ -3066,24 +3066,23 @@
                     span.style.transformOrigin = 'center';
                     wordSpans.push(span);
                     elements.previewText.appendChild(span);
-                    
+
                     // Add space after word (except last word) - space stays visible
                     if (index < words.length - 1) {
                         const space = document.createTextNode(' ');
                         elements.previewText.appendChild(space);
                     }
                 });
-                
+
                 // Now animate each word to shrink out of view (spaces remain)
-                // For shrink animation, we want last word to disappear first, then work backwards
+                // For shrink animation, first word disappears first (left to right, normal reading order)
                 words.forEach((word, index) => {
-                    const delay = direction === 'forward' 
-                        ? (words.length - 1 - index) * staggerDelay  // Last word first (reversed)
-                        : index * staggerDelay;
-                    
+                    // First word (index 0) has delay 0, last word has max delay
+                    const delay = index * staggerDelay;
+
                     const timeout = setTimeout(() => {
                         if (!animationState.isPlaying) return;
-                        
+
                         const span = wordSpans[index];
                         if (span) {
                             // Start shrink animation (word disappears, space remains)
@@ -3092,7 +3091,7 @@
                             span.style.animationFillMode = 'forwards'; // Keep final state (invisible)
                         }
                     }, delay);
-                    
+
                     window.scaleAnimationTimeouts.push(timeout);
                 });
             }
