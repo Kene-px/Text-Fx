@@ -245,7 +245,8 @@ function calculateFrameCount(
     case 'slide-down':
       return typeBy === 'letter' ? text.length + 1 : text.split(' ').length + 1;
     case 'scale':
-      return typeBy === 'letter' ? text.length + 1 : text.split(' ').length + 1;
+      // Scale animations only need 2 states: start and end
+      return 2;
     case 'rotate':
       return typeBy === 'letter' ? text.length + 1 : text.split(' ').length + 1;
     default:
@@ -286,31 +287,35 @@ async function createTextNodeForFrame(
     }
     case 'scale': {
       textNode.characters = text;
+      const baseFontSize = 16;
       // Map direction to scale type: forward = grow, backwards = shrink
       const isGrow = direction === 'forward';
-      
-      if (typeBy === 'word') {
-        if (isGrow) {
-          applyWordScaleGrowEffect(textNode, text, frameIndex, totalFrames, direction);
+
+      // Scale animation has only 2 states: start (frameIndex=0) and end (frameIndex=1)
+      // For grow: start = invisible/small, end = visible/normal
+      // For shrink: start = visible/normal, end = invisible/small
+
+      if (isGrow) {
+        // Scale grow: nothing → full view
+        if (frameIndex === 0) {
+          // Start state: invisible
+          textNode.opacity = 0;
+          textNode.fontSize = 1; // Minimum font size
         } else {
-          applyWordScaleShrinkEffect(textNode, text, frameIndex, totalFrames, direction);
+          // End state: fully visible
+          textNode.opacity = 1;
+          textNode.fontSize = baseFontSize;
         }
       } else {
-        // For letter-based scaling, use fontSize to scale the text
-        const baseFontSize = 16;
-        
-        if (isGrow) {
-          // Scale grow effect - start small and grow to normal size
-          const scale = Math.min(progress * 1.2, 1);
-          textNode.opacity = Math.min(progress * 1.5, 1);
-          // Scale the font size instead of dimensions
-          textNode.fontSize = Math.max(baseFontSize * scale, 1); // Minimum 1px font
+        // Scale shrink: full view → nothing
+        if (frameIndex === 0) {
+          // Start state: fully visible
+          textNode.opacity = 1;
+          textNode.fontSize = baseFontSize;
         } else {
-          // Scale shrink effect - start normal and shrink down  
-          const scale = Math.max(1 - progress * 1.2, 0.1);
-          textNode.opacity = Math.max(1 - progress * 1.2, 0.1);
-          // Scale the font size instead of dimensions
-          textNode.fontSize = Math.max(baseFontSize * scale, 1); // Minimum 1px font
+          // End state: invisible
+          textNode.opacity = 0;
+          textNode.fontSize = 1; // Minimum font size
         }
       }
       break;
@@ -687,36 +692,78 @@ async function setupSimplePrototyping(variants: ComponentNode[], animation: Anim
     }
 
     console.log(`Setting up simple prototyping for ${variants.length} variants`);
-    
-    // Calculate timing between frames
-    const frameDelay = Math.max(animation.duration / variants.length, 300); // At least 300ms per frame
-    console.log(`🐛 DEBUG setupSimplePrototyping: duration=${animation.duration}, variants.length=${variants.length}, frameDelay=${frameDelay}`);
+
+    // Calculate timing to ensure total animation duration matches user's set duration
+    // Total duration = sum of all (timeout + transition duration) across all frames
+    const totalDuration = animation.duration; // in milliseconds
+    const numTransitions = variants.length; // number of transitions (looping)
+
+    // Time budget per transition (in milliseconds)
+    const timePerTransition = totalDuration / numTransitions;
+
+    console.log(`🐛 DEBUG setupSimplePrototyping: totalDuration=${totalDuration}ms, numTransitions=${numTransitions}, timePerTransition=${timePerTransition}ms`);
     
     // Create minimal reaction format
+    const isScaleAnimation = animation.style === 'scale';
+    const isTypingAnimation = animation.style === 'typing';
+
     for (let i = 0; i < variants.length; i++) {
       const currentVariant = variants[i];
+      const isLastVariant = i === variants.length - 1;
+
+      // For scale animations, don't set a reaction on the last variant (no looping)
+      if (isScaleAnimation && isLastVariant) {
+        console.log(`🐛 DEBUG setupSimplePrototyping: Skipping last variant for scale (no loop)`);
+        continue;
+      }
+
       const nextVariant = variants[(i + 1) % variants.length];
-      
-      // Use the most minimal reaction format that Figma accepts
+
+      // Calculate timeout and transition duration based on animation style
+      // to ensure total duration matches user's set duration
+      let timeout: number; // in seconds
+      let transition: Transition | null;
+
+      if (isScaleAnimation) {
+        // Scale: transition duration IS the animation duration
+        timeout = 0.01; // minimal delay before transition starts
+        transition = {
+          type: 'SMART_ANIMATE',
+          duration: totalDuration / 1000, // full duration for the scale transition
+          easing: { type: 'EASE_OUT' }
+        };
+      } else if (isTypingAnimation) {
+        // Typing: instant transition, timeout creates the timing
+        // Total time per frame = timeout only (no transition duration)
+        timeout = timePerTransition / 1000;
+        transition = null;
+      } else {
+        // Dissolve animations: timeout + transition duration = time per transition
+        // Allocate 80% to timeout, 20% to transition (min 50ms transition)
+        const transitionDuration = Math.max(timePerTransition * 0.2, 50) / 1000; // in seconds
+        timeout = Math.max((timePerTransition / 1000) - transitionDuration, 0.01);
+        transition = {
+          type: 'DISSOLVE',
+          duration: transitionDuration,
+          easing: { type: 'LINEAR' }
+        };
+      }
+
       const reaction: Reaction = {
         actions: [{
           type: 'NODE',
           destinationId: nextVariant.id,
           navigation: 'CHANGE_TO',
-          transition: {
-            type: 'DISSOLVE',
-            duration: 0.1,
-            easing: { type: 'LINEAR' }
-          }
+          transition: transition
         }],
         trigger: {
           type: 'AFTER_TIMEOUT',
-          timeout: frameDelay / 1000  // Convert milliseconds to seconds for Figma API
+          timeout: timeout
         }
       };
-      
-      console.log(`🐛 DEBUG setupSimplePrototyping: Setting timeout=${frameDelay / 1000}s for variant ${i} (${currentVariant.name} -> ${nextVariant.name})`);
-      
+
+      console.log(`🐛 DEBUG setupSimplePrototyping: Setting timeout=${timeout}s, transition=${transition ? transition.type : 'instant'} for variant ${i} (${currentVariant.name} -> ${nextVariant.name})`);
+
       await currentVariant.setReactionsAsync([reaction]);
     }
     
