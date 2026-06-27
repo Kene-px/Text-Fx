@@ -8,6 +8,12 @@ interface AnimationSettings {
   direction: 'forward' | 'backwards';
   duration: number;
   color: string;
+  font?: { family: string; style: string; weight?: number };
+  textAlign?: 'left' | 'center' | 'right';
+  verticalAlign?: 'top' | 'middle' | 'bottom';
+  textCase?: 'none' | 'uppercase' | 'lowercase' | 'sentence' | 'titlecase';
+  textStyleId?: string;
+  fontSize?: number;
 }
 
 // Helper function to convert hex color to RGB
@@ -42,19 +48,39 @@ interface PluginMessage {
   data?: unknown;
 }
 
+function weightToFigmaStyle(weight: number): string {
+  const map: { [key: number]: string } = {
+    100: 'Thin', 200: 'Extra Light', 300: 'Light', 400: 'Regular',
+    500: 'Medium', 600: 'Semi Bold', 700: 'Bold', 800: 'Extra Bold', 900: 'Black'
+  };
+  return map[weight] || 'Regular';
+}
+
+async function sendTextStylesToUI() {
+  const styles = await figma.getLocalTextStylesAsync();
+  const styleData = styles.map(s => ({
+    id: s.id,
+    name: s.name,
+    fontName: s.fontName,
+    fontSize: s.fontSize,
+  }));
+  figma.ui.postMessage({ type: 'text-styles', data: styleData });
+}
+
 // Plugin initialization
 function initPlugin() {
   console.log('Initializing plugin...');
   // Show the UI
-  figma.showUI(__html__, { 
-    width: 480, 
+  figma.showUI(__html__, {
+    width: 480,
     height: 320,
-    themeColors: true 
+    themeColors: true
   });
 
   // Send initial selection to UI
   console.log('Sending initial selection...');
   sendSelectionToUI();
+  sendTextStylesToUI(); // async, fire-and-forget is fine here
 
   // Listen for selection changes
   console.log('Setting up selection change listener...');
@@ -113,6 +139,10 @@ async function handleUIMessage(msg: PluginMessage) {
   switch (type) {
     case 'get-selection':
       sendSelectionToUI();
+      break;
+
+    case 'get-text-styles':
+      await sendTextStylesToUI();
       break;
 
     case 'create-component':
@@ -261,8 +291,37 @@ async function createTextNodeForFrame(
   totalFrames: number
 ): Promise<TextNode> {
   const textNode = figma.createText();
-  // Load default font
-  await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+  // Load selected font, fall back to Inter
+  const fontFamily = animation.font?.family || 'Inter';
+  const fontWeight = animation.font?.weight || 400;
+  const figmaStyle = weightToFigmaStyle(fontWeight);
+  try {
+    await figma.loadFontAsync({ family: fontFamily, style: figmaStyle });
+  } catch {
+    try { await figma.loadFontAsync({ family: fontFamily, style: 'Regular' }); }
+    catch { await figma.loadFontAsync({ family: 'Inter', style: 'Regular' }); }
+  }
+  textNode.fontName = { family: fontFamily, style: figmaStyle };
+
+  // Apply Figma text style if one was selected; this sets fontName, fontSize, textCase, spacing
+  if (animation.textStyleId) {
+    try {
+      textNode.textStyleId = animation.textStyleId;
+    } catch (_e) {
+      // Style may have been deleted; fall back to manual settings already applied above
+    }
+  }
+
+  const alignMap: Record<string, 'LEFT' | 'CENTER' | 'RIGHT' | 'JUSTIFIED'> = {
+    left: 'LEFT', center: 'CENTER', right: 'RIGHT', justify: 'JUSTIFIED'
+  };
+  textNode.textAlignHorizontal = animation.textAlign ? (alignMap[animation.textAlign] || 'LEFT') : 'LEFT';
+  const caseMap: Record<string, 'ORIGINAL' | 'UPPER' | 'LOWER' | 'TITLE'> = {
+    none: 'ORIGINAL', uppercase: 'UPPER', lowercase: 'LOWER', titlecase: 'TITLE', sentence: 'ORIGINAL'
+  };
+  textNode.textCase = animation.textCase ? (caseMap[animation.textCase] || 'ORIGINAL') : 'ORIGINAL';
+  const vAlignMap: Record<string, 'TOP' | 'CENTER' | 'BOTTOM'> = { top: 'TOP', middle: 'CENTER', bottom: 'BOTTOM' };
+  textNode.textAlignVertical = animation.verticalAlign ? (vAlignMap[animation.verticalAlign] || 'CENTER') : 'CENTER';
   const { style, typeBy, direction } = animation;
   const progress = frameIndex / (totalFrames - 1);
   // Apply animation logic based on style and frame
@@ -287,7 +346,7 @@ async function createTextNodeForFrame(
     }
     case 'scale': {
       textNode.characters = text;
-      const baseFontSize = 16;
+      const baseFontSize = animation.fontSize || 16;
       // Map direction to scale type: forward = grow, backwards = shrink
       const isGrow = direction === 'forward';
 
@@ -343,9 +402,9 @@ async function createTextNodeForFrame(
     }
   }
   // Set basic text properties
-  // Only set default fontSize if it's not a scale or rotate animation (they set their own fontSize)
-  if (style !== 'scale' && style !== 'rotate') {
-    textNode.fontSize = 16;
+  // Set fontSize for all non-scale animations (scale sets it per-frame above)
+  if (style !== 'scale') {
+    textNode.fontSize = animation.fontSize || 16;
   }
   const textColor = hexToRgb(animation.color);
   textNode.fills = [{ type: 'SOLID', color: textColor }];
@@ -488,17 +547,14 @@ function applyWordScaleShrinkEffect(
 }
 
 function applyLetterRotateEffect(
-  textNode: TextNode, 
-  text: string, 
-  frameIndex: number, 
-  totalFrames: number, 
+  textNode: TextNode,
+  text: string,
+  frameIndex: number,
+  totalFrames: number,
   direction: 'forward' | 'backwards'
 ) {
   const progress = frameIndex / (totalFrames - 1);
-  
-  // Keep consistent font size (no scaling like scale animation)
-  textNode.fontSize = 16;
-  
+
   if (direction === 'forward') {
     // Forward rotation: simulate clockwise spiral - characters appear in a circular pattern
     // Instead of straight left-to-right, use a pattern that simulates rotation
@@ -555,18 +611,15 @@ function applyLetterRotateEffect(
 }
 
 function applyWordRotateEffect(
-  textNode: TextNode, 
-  text: string, 
-  frameIndex: number, 
-  totalFrames: number, 
+  textNode: TextNode,
+  text: string,
+  frameIndex: number,
+  totalFrames: number,
   direction: 'forward' | 'backwards'
 ) {
   const progress = frameIndex / (totalFrames - 1);
   const words = text.split(' ');
-  
-  // Keep consistent font size (no scaling like scale animation)
-  textNode.fontSize = 16;
-  
+
   if (direction === 'forward') {
     // Forward rotation: words appear in a spiral pattern (clockwise)
     // Simulate rotation by showing words in a circular pattern, not linear
@@ -1119,7 +1172,16 @@ async function createSlidesAnimation(data: ComponentData) {
       slide.name = `${text} Animation - Step ${i + 1}`;
       // Create text node for this slide
       const textNode = figma.createText();
-      await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+      const sFontFamily = animation.font?.family || 'Inter';
+      const sFontWeight = animation.font?.weight || 400;
+      const sFigmaStyle = weightToFigmaStyle(sFontWeight);
+      try {
+        await figma.loadFontAsync({ family: sFontFamily, style: sFigmaStyle });
+      } catch {
+        try { await figma.loadFontAsync({ family: sFontFamily, style: 'Regular' }); }
+        catch { await figma.loadFontAsync({ family: 'Inter', style: 'Regular' }); }
+      }
+      textNode.fontName = { family: sFontFamily, style: sFigmaStyle };
       const frameText = getFrameText(text, animation, i, frameCount);
       textNode.characters = frameText;
       textNode.fontSize = 24;
