@@ -7,7 +7,6 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-size: 13px;
         }
 
         html, body {
@@ -236,20 +235,250 @@
             background: #212121;
             border: 1px solid #3F3F46;
             border-radius: 10px;
-            padding: 20px;
             margin-bottom: 20px;
-            height: 80px;
-            max-height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            height: 210px;
             position: relative;
             overflow: hidden;
         }
 
+        .preview-scroll {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .preview-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .preview-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .preview-scroll::-webkit-scrollbar-thumb {
+            background: #3F3F46;
+            border-radius: 2px;
+        }
+
+        .preview-scroll::-webkit-scrollbar-thumb:hover {
+            background: #52525B;
+        }
+
+        .preview-inner {
+            min-height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 20px 40px;
+        }
+
+        .font-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            padding: 6px 10px;
+            z-index: 10;
+            background: rgba(9, 9, 11, 0.3);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 0 0 10px 10px;
+        }
+
+        .font-picker-btn {
+            background: none;
+            color: #BEBEBE;
+            border: none;
+            padding: 3px 6px;
+            font-size: 11px;
+            font-family: inherit;
+            cursor: pointer;
+            white-space: nowrap;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.4;
+        }
+
+        .font-picker-btn:hover {
+            padding: 3px 6px;
+            background: #2F2F2F;
+            border-radius: 4px;
+            color: #FFFFFF;
+        }
+
+        .font-divider {
+            color: #2C2C2C;
+            font-size: 14px;
+            padding: 0 6px;
+            user-select: none;
+            line-height: 1;
+        }
+
+        .font-weight-btn {
+            background: none;
+            border: none;
+            color: #BEBEBE;
+            font-size: 11px;
+            font-family: inherit;
+            cursor: pointer;
+            white-space: nowrap;
+            padding: 3px 6px;
+            line-height: 1.4;
+        }
+
+        .font-weight-btn:hover {
+            padding: 3px 6px;
+            background: #2F2F2F;
+            border-radius: 4px;
+            color: #FFFFFF;
+        }
+
+        .font-size-btn {
+            background: none;
+            border: none;
+            color: #BEBEBE;
+            font-size: 11px;
+            font-family: inherit;
+            cursor: pointer;
+            white-space: nowrap;
+            padding: 3px 6px;
+            line-height: 1.4;
+        }
+
+        .font-size-btn:hover {
+            padding: 3px 6px;
+            background: #2F2F2F;
+            border-radius: 4px;
+            color: #FFFFFF;
+        }
+
+        .font-align-btn {
+            background: none;
+            border: none;
+            color: #BEBEBE;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 3px 6px;
+            line-height: 1;
+        }
+
+        .font-align-btn:hover {
+            padding: 3px 6px;
+            background: #2F2F2F;
+            border-radius: 4px;
+            color: #FFFFFF;
+        }
+
+        .font-case-btn {
+            background: none;
+            border: none;
+            color: #BEBEBE;
+            font-size: 11px;
+            font-family: inherit;
+            cursor: pointer;
+            white-space: nowrap;
+            padding: 3px 6px;
+            line-height: 1.4;
+            letter-spacing: -0.5px;
+        }
+
+        .font-case-btn:hover {
+            padding: 3px 6px;
+            background: #2F2F2F;
+            border-radius: 4px;
+            color: #FFFFFF;
+        }
+
+        .font-size-input {
+            background: rgba(255,255,255,0.07);
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px 8px 0 0;
+            color: #FFFFFF;
+            font-size: 12px;
+            font-family: inherit;
+            padding: 8px 12px;
+            outline: none;
+            width: 100%;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .font-size-input::placeholder {
+            color: rgba(255,255,255,0.35);
+        }
+
+        .font-picker-dropdown,
+        .font-weight-dropdown {
+            position: fixed;
+            background: #2C2C2C;
+            border: none;
+            border-radius: 8px;
+            z-index: 9999;
+            display: none;
+            max-height: 240px;
+            overflow-y: auto;
+            min-width: 160px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+        }
+
+        .font-picker-dropdown.open,
+        .font-weight-dropdown.open {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .font-search-input {
+            background: rgba(255,255,255,0.07);
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px 8px 0 0;
+            color: #FFFFFF;
+            font-size: 12px;
+            font-family: inherit;
+            padding: 8px 12px;
+            outline: none;
+            flex-shrink: 0;
+        }
+
+        .font-search-input::placeholder {
+            color: rgba(255,255,255,0.35);
+        }
+
+        .font-options-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .font-option,
+        .weight-option {
+            padding: 7px 12px;
+            font-size: 13px;
+            color: #FFFFFF;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+
+        .font-option:hover,
+        .weight-option:hover {
+            background: rgba(255,255,255,0.08);
+        }
+
+        .font-option.active,
+        .weight-option.active {
+            background: rgba(255,255,255,0.12);
+        }
+
         .preview-text {
-            font-size: 16px;
-            font-weight: 400;
             color: #fcfcfc;
             text-align: center;
             max-width: 100%;
@@ -652,40 +881,40 @@
         }
 
         .color-picker-container {
-            position: absolute;
-            top: -35px;
-            right: 0;
             display: flex;
             align-items: center;
-            gap: 8px;
-            z-index: 10;
+            position: relative;
         }
 
         .color-picker-button {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             border: 1px solid #3D3D3D;
             border-radius: 3px;
             background: #ffffff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             cursor: pointer;
-            color: #9CA3AF;
-            transition: all 0.2s;
+            transition: border-color 0.15s;
         }
 
         .color-picker-button:hover {
-            border-color: #3B82F6;
-            color: #3B82F6;
+            border-color: #71717A;
         }
 
-        .color-hex-display {
-            font-size: 12px;
-            color: #9CA3AF;
-            /* font-family: 'Courier New', monospace; */
-            min-width: 60px;
+        .color-hex-tooltip {
+            position: fixed;
+            background: #1C1C1E;
+            border: 1px solid #3F3F46;
+            border-radius: 5px;
+            padding: 4px 8px;
+            font-size: 11px;
+            color: #FFFFFF;
             user-select: all;
+            cursor: text;
+            display: none;
+            z-index: 99999;
+            white-space: nowrap;
+            transform: translateX(-50%);
+            pointer-events: auto;
         }
 
         .play-pause-btn {
@@ -900,6 +1129,15 @@
         @keyframes slideDown {
             from { transform: translateY(-100%); }
             to { transform: translateY(0); }
+        }
+
+        .animate-slide-out {
+            animation: slideOut 1s ease-in-out forwards;
+        }
+
+        @keyframes slideOut {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(100%); opacity: 0; }
         }
 
         .animate-scale {
@@ -1134,6 +1372,164 @@
             margin-top: 8px;
             display: none;
         }
+
+        /* Text Style Picker */
+        .text-style-btn {
+            background: none;
+            border: none;
+            color: #BEBEBE;
+            cursor: pointer;
+            padding: 3px 6px;
+            display: flex;
+            align-items: center;
+            line-height: 1;
+            border-radius: 4px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .text-style-btn:hover {
+            background: #2F2F2F;
+            color: #FFFFFF;
+        }
+
+        .style-active-chip {
+            display: none;
+            background: #2F2F2F;
+            color: #FFFFFF;
+            font-size: 11px;
+            font-family: inherit;
+            padding: 2px 5px;
+            border-radius: 3px;
+            white-space: nowrap;
+            line-height: 1.4;
+        }
+
+        .text-style-dropdown {
+            position: fixed;
+            background: #2C2C2C;
+            border-radius: 8px;
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            width: 220px;
+            max-height: 260px;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+        }
+
+        .text-style-dropdown.open {
+            display: flex;
+        }
+
+        .text-style-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .text-style-list::-webkit-scrollbar { width: 4px; }
+        .text-style-list::-webkit-scrollbar-track { background: transparent; }
+        .text-style-list::-webkit-scrollbar-thumb { background: #3F3F46; border-radius: 2px; }
+
+        .style-group-header {
+            padding: 8px 12px 3px;
+            font-size: 10px;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 600;
+            user-select: none;
+        }
+
+        .style-option {
+            padding: 6px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            gap: 8px;
+        }
+
+        .style-option:hover { background: rgba(255,255,255,0.08); }
+        .style-option.active { background: rgba(255,255,255,0.12); }
+
+        .style-option-name {
+            font-size: 13px;
+            color: #FFFFFF;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .style-option-meta {
+            font-size: 11px;
+            color: #6B7280;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .style-detach-btn {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 3px 4px;
+            align-items: center;
+            line-height: 1;
+            border-radius: 4px;
+            flex-shrink: 0;
+            opacity: 0.7;
+        }
+
+        .style-detach-btn:hover { background: #2F2F2F; opacity: 1; }
+
+        /* Font controls lock state — active when a text style is applied */
+        .font-controls-lockable {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .font-controls-locked .font-controls-lockable {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .font-controls-locked .font-controls-lockable > * {
+            pointer-events: none;
+        }
+
+        .font-controls-locked .font-controls-lockable::after {
+            content: 'Detach style to edit';
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1C1C1E;
+            border: 1px solid #3F3F46;
+            color: #FFFFFF;
+            font-size: 11px;
+            padding: 5px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .font-controls-locked .font-controls-lockable:hover::after {
+            opacity: 1;
+        }
+
+        .style-empty-state {
+            padding: 16px 12px;
+            font-size: 12px;
+            color: #6B7280;
+            text-align: center;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -1184,7 +1580,11 @@
 
             <div style="position: relative;">
                 <div class="preview-container" id="preview-container">
+                    <div class="preview-scroll">
+                    <div class="preview-inner" id="preview-inner">
                     <div class="preview-text" id="preview-text">Sample Text</div>
+                    </div>
+                    </div>
                     <button class="play-pause-btn" id="play-pause-btn" data-state="paused">
                         <!-- Default play state (small) -->
                         <svg class="play-icon small-icon" width="32" height="26" viewBox="0 0 22 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1258,15 +1658,45 @@
                             </defs>
                         </svg>
                     </button>
-                </div>
-                <div class="color-picker-container">
-                    <div class="color-picker-button" id="color-picker-button">
-                        <!-- <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.21-.64-1.67-.08-.09-.13-.21-.13-.33 0-.28.22-.5.5-.5h3.77C20.66 17 22 15.66 22 14V8.5C22 4.91 18.09 1 14.5 1l-.5.01c-.56 0-1 .45-1 1C13 2.56 12.56 3 12 3s-1-.44-1-1c0-.55-.45-1-1-1-.17 0-.33.04-.5.01zM8.5 8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5zm3-4c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5zm4.5 2.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5z" fill="currentColor"/>
-                        </svg> -->
+
+                    <!-- Font controls -->
+                    <div class="font-controls" id="font-controls">
+                        <div class="font-controls-lockable" id="font-controls-lockable">
+                            <button class="font-picker-btn" id="font-picker-btn">Inter</button>
+                            <span class="font-divider">|</span>
+                            <button class="font-weight-btn" id="font-weight-btn">Regular</button>
+                            <span class="font-divider">|</span>
+                            <button class="font-size-btn" id="font-size-btn">16</button>
+                            <span class="font-divider">|</span>
+                            <button class="font-align-btn" id="font-align-btn">
+                                <svg width="14" height="11" viewBox="0 0 14 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="0" y="0" width="14" height="1.8" rx="0.9" fill="currentColor"/>
+                                    <rect x="0" y="4.6" width="9" height="1.8" rx="0.9" fill="currentColor"/>
+                                    <rect x="0" y="9.2" width="11" height="1.8" rx="0.9" fill="currentColor"/>
+                                </svg>
+                            </button>
+                            <span class="font-divider">|</span>
+                            <button class="font-case-btn" id="font-case-btn">Ag</button>
+                        </div>
+                        <span class="font-divider">|</span>
+                        <div class="color-picker-container">
+                            <div class="color-picker-button" id="color-picker-button"></div>
+                            <input type="color" id="color-picker-input" value="#ffffff" style="position:absolute;width:1px;height:1px;opacity:0;border:none;padding:0;pointer-events:none;">
+                        </div>
+                        <button class="text-style-btn" id="text-style-btn" title="Text styles">
+                            <svg width="28" height="22" viewBox="0 0 28 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M17.6933 8.54001C18.5991 8.54001 19.3333 7.80576 19.3333 6.90001C19.3333 5.99426 18.5991 5.26001 17.6933 5.26001C16.7876 5.26001 16.0533 5.99426 16.0533 6.90001C16.0533 7.80576 16.7876 8.54001 17.6933 8.54001Z" stroke="currentColor" stroke-width="1.2" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M10.3067 8.54001C11.2124 8.54001 11.9467 7.80576 11.9467 6.90001C11.9467 5.99426 11.2124 5.26001 10.3067 5.26001C9.40091 5.26001 8.66666 5.99426 8.66666 6.90001C8.66666 7.80576 9.40091 8.54001 10.3067 8.54001Z" stroke="currentColor" stroke-width="1.2" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M17.6933 16.74C18.5991 16.74 19.3333 16.0058 19.3333 15.1C19.3333 14.1943 18.5991 13.46 17.6933 13.46C16.7876 13.46 16.0533 14.1943 16.0533 15.1C16.0533 16.0058 16.7876 16.74 17.6933 16.74Z" stroke="currentColor" stroke-width="1.2" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M10.3067 16.74C11.2124 16.74 11.9467 16.0058 11.9467 15.1C11.9467 14.1943 11.2124 13.46 10.3067 13.46C9.40091 13.46 8.66666 14.1943 8.66666 15.1C8.66666 16.0058 9.40091 16.74 10.3067 16.74Z" stroke="currentColor" stroke-width="1.2" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button class="style-detach-btn" id="style-detach-btn" title="Detach text style">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" clip-rule="evenodd" d="M11.675 11.675C11.5812 11.7687 11.4541 11.8214 11.3215 11.8214C11.1889 11.8214 11.0618 11.7687 10.968 11.675L0.325001 1.0325C0.278513 0.986079 0.241624 0.930954 0.216439 0.870276C0.191255 0.809597 0.178269 0.744552 0.178223 0.678854C0.178176 0.613157 0.19107 0.548094 0.216169 0.487379C0.241267 0.426665 0.278079 0.371489 0.324501 0.325001C0.370923 0.278513 0.426047 0.241624 0.486726 0.216439C0.547405 0.191255 0.61245 0.178269 0.678147 0.178223C0.743845 0.178176 0.808908 0.19107 0.869622 0.216169C0.930337 0.241267 0.985513 0.278079 1.032 0.324501L4.0345 3.3275L5.75 1.612C6.36504 0.996964 7.19921 0.65144 8.069 0.65144C8.93879 0.65144 9.77296 0.996964 10.388 1.612C11.003 2.22704 11.3486 3.06121 11.3486 3.931C11.3486 4.80079 11.003 5.63496 10.388 6.25L8.673 7.965L11.6755 10.968C11.722 11.0144 11.7589 11.0696 11.784 11.1303C11.8092 11.191 11.8221 11.256 11.8221 11.3218C11.8221 11.3875 11.8092 11.4525 11.784 11.5132C11.7589 11.5739 11.722 11.6291 11.6755 11.6755L11.675 11.675ZM7.965 7.2585L9.681 5.543C10.1085 5.11554 10.3487 4.53575 10.3488 3.93118C10.3488 3.32661 10.1087 2.74678 9.68125 2.31925C9.25379 1.89172 8.674 1.65151 8.06943 1.65147C7.46486 1.65142 6.88503 1.89154 6.4575 2.319L4.7415 4.035L7.9655 7.259L7.965 7.2585ZM3.1015 5.675L2.3195 6.457C1.8922 6.88455 1.65216 7.46428 1.65216 8.06875C1.65216 8.67322 1.8922 9.25295 2.3195 9.6805C3.172 10.533 4.789 10.435 5.7195 9.505L6.3235 8.9C6.41732 8.80625 6.54454 8.7536 6.67718 8.75365C6.80981 8.7537 6.937 8.80643 7.03075 8.90025C7.1245 8.99407 7.17715 9.12129 7.1771 9.25393C7.17706 9.38656 7.12432 9.51375 7.0305 9.6075L6.426 10.212C5.185 11.453 2.931 11.706 1.6125 10.3875C0.997571 9.77241 0.652121 8.93826 0.652121 8.0685C0.652121 7.19874 0.997571 6.36459 1.6125 5.7495L2.394 4.968C2.48776 4.87418 2.61494 4.82145 2.74757 4.8214C2.88021 4.82135 3.00743 4.874 3.10125 4.96775C3.19507 5.06151 3.24781 5.18869 3.24785 5.32132C3.2479 5.45396 3.19526 5.58118 3.1015 5.675Z" fill="#F2F2F2"/>
+                            </svg>
+                        </button>
                     </div>
-                    <span class="color-hex-display" id="color-hex-display">#FFFFFF</span>
-                    <input type="color" id="color-picker-input" value="#ffffff" style="position: absolute; top: 0; right: 0; width: 1px; height: 1px; opacity: 0; border: none; padding: 0;">
                 </div>
                 
             </div>
@@ -1280,16 +1710,16 @@
                             <select class="select-input select-input--small" id="style-select">
                                 <option value="typing">Typing</option>
                                 <option value="scale">Scale</option>
-                                <option value="rotate" disabled>Rotate</option>
-                                <option value="fade" disabled>Fade</option>
-                                <option value="slide" disabled>Slide</option>
+                                <option value="rotate">Rotate</option>
+                                <option value="fade">Fade</option>
+                                <option value="slide">Slide</option>
                             </select>
                         </div>
                     </div>
 
                     <div class="control-group">
                         <label class="control-label" style="margin-bottom: 6px;" id="type-by-label">Type by</label>
-                        <div class="radio-group">
+                        <div class="radio-group" id="typeby-radios">
                             <label class="radio-option">
                                 <input type="radio" name="type-by" value="letter" checked>
                                 <span class="radio-text">Letter</span>
@@ -1297,6 +1727,16 @@
                             <label class="radio-option">
                                 <input type="radio" name="type-by" value="word">
                                 <span class="radio-text">Word</span>
+                            </label>
+                        </div>
+                        <div class="radio-group" id="rotate-dir-radios" style="display:none;">
+                            <label class="radio-option">
+                                <input type="radio" name="rotate-dir" value="forward" checked>
+                                <span class="radio-text">Forward</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="rotate-dir" value="backwards">
+                                <span class="radio-text">Backward</span>
                             </label>
                         </div>
                     </div>
@@ -1358,7 +1798,7 @@
                         <div class="spinner" id="create-btn-spinner" style="display: none;"></div>
                         <span id="create-btn-text">Create component</span>
                     </button>
-                    <button class="export-json-btn" id="export-json-btn" disabled>
+                    <button class="export-json-btn" id="export-json-btn">
                         Export as JSON
                     </button>
                 </div> 
@@ -1366,7 +1806,7 @@
 
         <div class="footer">
             <span class="beta-version" id="beta-version">
-                <span class="beta-text">Beta 1.0</span>
+                <span class="beta-text">v 1.0</span>
                 <div class="credits-tooltip" id="credits-tooltip">
                     <span>Designed by </span><a href="https://hellokene.com/" target="_blank" class="credit-link">kene</a><span>. Developed by </span><a href="https://sarah-adewale.netlify.app/" target="_blank" class="credit-link">sarah</a>
                 </div>
@@ -1411,8 +1851,164 @@
             typeBy: 'letter',
             direction: 'forward',
             duration: 1000,
-            color: '#ffffff'
+            color: '#ffffff',
+            font: { family: 'Inter', style: 'Regular' },
+            fontSize: 16,
+            textAlign: 'left',
+            verticalAlign: 'middle',
+            textCase: 'none'
         };
+
+        const WEIGHT_NAMES = {
+            100: 'Thin', 200: 'ExtraLight', 300: 'Light', 400: 'Regular',
+            500: 'Medium', 600: 'SemiBold', 700: 'Bold', 800: 'ExtraBold', 900: 'Black'
+        };
+
+        const GOOGLE_FONTS = [
+            { family: 'ABeeZee', weights: [400] },
+            { family: 'Abel', weights: [400] },
+            { family: 'Abril Fatface', weights: [400] },
+            { family: 'Acme', weights: [400] },
+            { family: 'Alegreya', weights: [400, 500, 700, 800, 900] },
+            { family: 'Alegreya Sans', weights: [100, 300, 400, 500, 700, 800, 900] },
+            { family: 'Alfa Slab One', weights: [400] },
+            { family: 'Alumni Sans', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Archivo', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Archivo Black', weights: [400] },
+            { family: 'Archivo Narrow', weights: [400, 500, 600, 700] },
+            { family: 'Arimo', weights: [400, 500, 600, 700] },
+            { family: 'Arvo', weights: [400, 700] },
+            { family: 'Asap', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Assistant', weights: [200, 300, 400, 500, 600, 700, 800] },
+            { family: 'Barlow', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Barlow Condensed', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Be Vietnam Pro', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Bebas Neue', weights: [400] },
+            { family: 'Big Shoulders Display', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Bitter', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Bodoni Moda', weights: [400, 500, 600, 700, 800, 900] },
+            { family: 'Bricolage Grotesque', weights: [200, 300, 400, 500, 600, 700, 800] },
+            { family: 'Cabin', weights: [400, 500, 600, 700] },
+            { family: 'Cairo', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Caveat', weights: [400, 500, 600, 700] },
+            { family: 'Chakra Petch', weights: [300, 400, 500, 600, 700] },
+            { family: 'Chivo', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Cinzel', weights: [400, 500, 600, 700, 800, 900] },
+            { family: 'Comfortaa', weights: [300, 400, 500, 600, 700] },
+            { family: 'Commissioner', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Concert One', weights: [400] },
+            { family: 'Cormorant Garamond', weights: [300, 400, 500, 600, 700] },
+            { family: 'Crimson Text', weights: [400, 600, 700] },
+            { family: 'Dancing Script', weights: [400, 500, 600, 700] },
+            { family: 'DM Mono', weights: [300, 400, 500] },
+            { family: 'DM Sans', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'DM Serif Display', weights: [400] },
+            { family: 'Domine', weights: [400, 500, 600, 700] },
+            { family: 'Dosis', weights: [200, 300, 400, 500, 600, 700, 800] },
+            { family: 'EB Garamond', weights: [400, 500, 600, 700, 800] },
+            { family: 'Encode Sans', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Epilogue', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Exo 2', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Figtree', weights: [300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Fira Code', weights: [300, 400, 500, 600, 700] },
+            { family: 'Fira Sans', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Fjalla One', weights: [400] },
+            { family: 'Francois One', weights: [400] },
+            { family: 'Frank Ruhl Libre', weights: [300, 400, 500, 700, 900] },
+            { family: 'Fredoka', weights: [300, 400, 500, 600, 700] },
+            { family: 'Geologica', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Golos Text', weights: [400, 500, 600, 700, 800, 900] },
+            { family: 'Gothic A1', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Hanken Grotesk', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Heebo', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Hind', weights: [300, 400, 500, 600, 700] },
+            { family: 'IBM Plex Mono', weights: [100, 200, 300, 400, 500, 600, 700] },
+            { family: 'IBM Plex Sans', weights: [100, 200, 300, 400, 500, 600, 700] },
+            { family: 'IBM Plex Serif', weights: [100, 200, 300, 400, 500, 600, 700] },
+            { family: 'Inconsolata', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Indie Flower', weights: [400] },
+            { family: 'Inter', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Inter Tight', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Josefin Sans', weights: [100, 200, 300, 400, 500, 600, 700] },
+            { family: 'Josefin Slab', weights: [100, 200, 300, 400, 500, 600, 700] },
+            { family: 'Jost', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Kanit', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Karla', weights: [200, 300, 400, 500, 600, 700, 800] },
+            { family: 'Kumbh Sans', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Lato', weights: [100, 300, 400, 700, 900] },
+            { family: 'Lexend', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Libre Baskerville', weights: [400, 700] },
+            { family: 'Libre Franklin', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Lobster', weights: [400] },
+            { family: 'Lora', weights: [400, 500, 600, 700] },
+            { family: 'Manrope', weights: [200, 300, 400, 500, 600, 700, 800] },
+            { family: 'Maven Pro', weights: [400, 500, 600, 700, 800, 900] },
+            { family: 'Merriweather', weights: [300, 400, 700, 900] },
+            { family: 'Merriweather Sans', weights: [300, 400, 500, 600, 700, 800] },
+            { family: 'Montserrat', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Mukta', weights: [200, 300, 400, 500, 600, 700, 800] },
+            { family: 'Mulish', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Noto Sans', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Noto Serif', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Nunito', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Nunito Sans', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Onest', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Open Sans', weights: [300, 400, 500, 600, 700, 800] },
+            { family: 'Orbitron', weights: [400, 500, 600, 700, 800, 900] },
+            { family: 'Oswald', weights: [200, 300, 400, 500, 600, 700] },
+            { family: 'Outfit', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Overpass', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Oxygen', weights: [300, 400, 700] },
+            { family: 'Pacifico', weights: [400] },
+            { family: 'Philosopher', weights: [400, 700] },
+            { family: 'Playfair Display', weights: [400, 500, 600, 700, 800, 900] },
+            { family: 'Plus Jakarta Sans', weights: [200, 300, 400, 500, 600, 700, 800] },
+            { family: 'Poppins', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Prompt', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'PT Sans', weights: [400, 700] },
+            { family: 'PT Serif', weights: [400, 700] },
+            { family: 'Public Sans', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Quicksand', weights: [300, 400, 500, 600, 700] },
+            { family: 'Rajdhani', weights: [300, 400, 500, 600, 700] },
+            { family: 'Raleway', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Readex Pro', weights: [200, 300, 400, 500, 600, 700] },
+            { family: 'Red Hat Display', weights: [300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Righteous', weights: [400] },
+            { family: 'Roboto', weights: [100, 300, 400, 500, 700, 900] },
+            { family: 'Roboto Condensed', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Roboto Mono', weights: [100, 200, 300, 400, 500, 600, 700] },
+            { family: 'Roboto Slab', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Rokkitt', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Rubik', weights: [300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Saira', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Satisfy', weights: [400] },
+            { family: 'Scada', weights: [400, 700] },
+            { family: 'Sen', weights: [400, 500, 600, 700, 800] },
+            { family: 'Signika', weights: [300, 400, 500, 600, 700] },
+            { family: 'Silkscreen', weights: [400, 700] },
+            { family: 'Sora', weights: [100, 200, 300, 400, 500, 600, 700, 800] },
+            { family: 'Source Code Pro', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Source Sans 3', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Space Grotesk', weights: [300, 400, 500, 600, 700] },
+            { family: 'Space Mono', weights: [400, 700] },
+            { family: 'Spectral', weights: [200, 300, 400, 500, 600, 700, 800] },
+            { family: 'Syne', weights: [400, 500, 600, 700, 800] },
+            { family: 'Teko', weights: [300, 400, 500, 600, 700] },
+            { family: 'Titillium Web', weights: [200, 300, 400, 600, 700, 900] },
+            { family: 'Ubuntu', weights: [300, 400, 500, 700] },
+            { family: 'Unbounded', weights: [200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Urbanist', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Varela Round', weights: [400] },
+            { family: 'Vollkorn', weights: [400, 500, 600, 700, 800, 900] },
+            { family: 'Work Sans', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Yanone Kaffeesatz', weights: [200, 300, 400, 500, 600, 700] },
+            { family: 'Ysabeau', weights: [100, 200, 300, 400, 500, 600, 700, 800, 900] },
+            { family: 'Zilla Slab', weights: [300, 400, 500, 600, 700] },
+        ];
+
+        // Text style state
+        let localTextStyles = [];
+        let selectedTextStyleId = null;
 
         // Animation playback state
         let animationState = {
@@ -1567,57 +2163,62 @@
         function initializeColorPicker() {
             const colorButton = document.getElementById('color-picker-button');
             const colorInput = document.getElementById('color-picker-input');
-            const colorHexDisplay = document.getElementById('color-hex-display');
-            
-            if (!colorButton || !colorInput || !colorHexDisplay) return;
-            
-            // Initialize color picker with current animation settings color
+            if (!colorButton || !colorInput) return;
+
+            // Build tooltip (appended to body so it escapes overflow:hidden)
+            const tooltip = document.createElement('div');
+            tooltip.className = 'color-hex-tooltip';
+            tooltip.id = 'color-hex-tooltip';
+            tooltip.textContent = animationSettings.color.toUpperCase();
+            document.body.appendChild(tooltip);
+
+            let hideTimer;
+
+            colorButton.addEventListener('mouseenter', () => {
+                clearTimeout(hideTimer);
+                tooltip.textContent = animationSettings.color.toUpperCase();
+                tooltip.style.display = 'block';
+                const rect = colorButton.getBoundingClientRect();
+                tooltip.style.left = `${rect.left + rect.width / 2}px`;
+                tooltip.style.top = `${rect.top - tooltip.offsetHeight - 6}px`;
+            });
+
+            colorButton.addEventListener('mouseleave', () => {
+                hideTimer = setTimeout(() => {
+                    if (!tooltip.matches(':hover')) tooltip.style.display = 'none';
+                }, 120);
+            });
+
+            tooltip.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+            tooltip.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+
             colorInput.value = animationSettings.color;
             updateTextColor(animationSettings.color);
-            
-            // Open color picker when button is clicked
-            colorButton.addEventListener('click', (e) => {
+
+            colorButton.addEventListener('click', () => {
+                tooltip.style.display = 'none';
                 colorInput.click();
             });
-            
-            // Handle color change
-            colorInput.addEventListener('change', (e) => {
-                const newColor = e.target.value;
-                updateTextColor(newColor);
-            });
-            
-            // Also handle input event for real-time updates
-            colorInput.addEventListener('input', (e) => {
-                const newColor = e.target.value;
-                updateTextColor(newColor);
-            });
+
+            colorInput.addEventListener('input', (e) => updateTextColor(e.target.value));
+            colorInput.addEventListener('change', (e) => updateTextColor(e.target.value));
         }
-        
+
         function updateTextColor(color) {
-            // Update animation settings
+            clearTextStyle();
             animationSettings.color = color;
-            console.log('DEBUG: Color updated to:', color, 'animationSettings.color:', animationSettings.color);
-            
-            // Update hex display
-            const colorHexDisplay = document.getElementById('color-hex-display');
-            if (colorHexDisplay) {
-                colorHexDisplay.textContent = color.toUpperCase();
-            }
-            
-            // Update preview text color
+
+            // Keep tooltip in sync
+            const tooltip = document.getElementById('color-hex-tooltip');
+            if (tooltip) tooltip.textContent = color.toUpperCase();
+
             const previewText = document.getElementById('preview-text');
-            if (previewText) {
-                previewText.style.color = color;
-            }
-            
-            // Update color picker button background to show current color
+            if (previewText) previewText.style.color = color;
+
             const colorButton = document.getElementById('color-picker-button');
             if (colorButton) {
                 colorButton.style.backgroundColor = color;
                 colorButton.style.borderColor = color;
-                // Adjust icon color based on background brightness
-                const brightness = getBrightness(color);
-                colorButton.style.color = brightness > 128 ? '#000000' : '#ffffff';
             }
         }
         
@@ -1799,302 +2400,293 @@
             showCompleteTextWhenPaused();
         }
 
-        // Export animation configuration as Lottie JSON
+        // Export animation as Lottie JSON
         function exportAnimationAsJSON() {
-            // Ensure we have the latest settings from the UI
-            updateAnimation();
-            
-            // Ensure we have the latest color from the color picker
-            const colorInput = document.getElementById('color-picker-input');
-            if (colorInput) {
-                animationSettings.color = colorInput.value;
+            // Read color directly in case picker updated without triggering change event
+            const colorInputEl = document.getElementById('color-picker-input');
+            if (colorInputEl) animationSettings.color = colorInputEl.value;
+
+            const animText = (selectedText || '').trim() || 'Sample Text';
+            const { style, typeBy, direction, duration, color } = animationSettings;
+            const fontFamily = animationSettings.font ? animationSettings.font.family : 'Inter';
+            const fontStyle  = animationSettings.font ? animationSettings.font.style  : 'Regular';
+            const fontWeight = animationSettings.font ? animationSettings.font.weight || 400 : 400;
+
+            // ── Constants ─────────────────────────────────────────────────────
+            const FR        = 30;
+            const TOTAL_F   = Math.max(15, Math.ceil((duration / 1000) * FR));
+            const CW        = 800;   // canvas width
+            const CH        = 200;   // canvas height
+            const FONT_SIZE = Math.min(72, Math.max(20, Math.floor(620 / Math.max(animText.length, 2))));
+            const TEXT_Y    = CH / 2 + FONT_SIZE * 0.35;   // approx text baseline
+            const FONT_NAME = fontFamily.replace(/\s+/g, '') + '-' + fontStyle.replace(/\s+/g, '');
+
+            // hexToRgbArray is defined globally and returns [r, g, b] normalised 0–1
+            const fc = hexToRgbArray(color);
+
+            // ── Lottie helpers ────────────────────────────────────────────────
+
+            // Static (non-animated) property value
+            function sv(v) { return { a: 0, k: v }; }
+
+            // Remove consecutive duplicate-time keyframes
+            function dedup(kfs) {
+                return kfs.filter((kf, i) => i === 0 || kf.t !== kfs[i - 1].t);
             }
-            
-            console.log('DEBUG: Exporting JSON with color:', animationSettings.color);
-            console.log('DEBUG: Color input value:', colorInput ? colorInput.value : 'not found');
-            console.log('DEBUG: Color RGB array:', hexToRgbArray(animationSettings.color));
-            console.log('DEBUG: Animation settings:', animationSettings);
-            
-            const animText = selectedText.trim() || "Sample text";
-            const frameDuration = animationSettings.duration / 1000; // Convert to seconds
-            const frameRate = 30;
-            const totalFrames = Math.ceil(frameDuration * frameRate);
-            
-            // Pre-built letter shapes library with better readability
-            function getLetterPath(char) {
-                const letterPaths = {
-                    'A': [[[5, 0], [5, 30], [15, 40], [25, 40], [35, 30], [35, 0]], [[10, 15], [30, 15]]],
-                    'B': [[[5, 0], [5, 40], [25, 40], [30, 37], [30, 23], [25, 20], [30, 17], [30, 3], [25, 0], [5, 0]], [[5, 20], [25, 20]]],
-                    'C': [[[30, 5], [25, 0], [15, 0], [10, 5], [10, 35], [15, 40], [25, 40], [30, 35]]],
-                    'D': [[[5, 0], [5, 40], [20, 40], [30, 35], [30, 5], [20, 0], [5, 0]]],
-                    'E': [[[5, 0], [5, 40], [30, 40]], [[5, 20], [25, 20]], [[5, 0], [30, 0]]],
-                    'F': [[[5, 0], [5, 40], [30, 40]], [[5, 22], [25, 22]]],
-                    'G': [[[30, 5], [25, 0], [15, 0], [10, 5], [10, 35], [15, 40], [25, 40], [30, 35], [30, 20], [22, 20]]],
-                    'H': [[[5, 0], [5, 40]], [[30, 0], [30, 40]], [[5, 20], [30, 20]]],
-                    'I': [[[17, 0], [17, 40]], [[10, 0], [25, 0]], [[10, 40], [25, 40]]],
-                    'J': [[[25, 0], [25, 30], [20, 35], [15, 35], [10, 30]]],
-                    'K': [[[5, 0], [5, 40]], [[30, 40], [5, 20]], [[15, 20], [30, 0]]],
-                    'L': [[[5, 0], [5, 40]], [[5, 0], [28, 0]]],
-                    'M': [[[5, 0], [5, 40], [17, 25], [29, 40], [29, 0]]],
-                    'N': [[[5, 0], [5, 40], [30, 0], [30, 40]]],
-                    'O': [[[15, 0], [25, 0], [30, 5], [30, 35], [25, 40], [15, 40], [10, 35], [10, 5], [15, 0]]],
-                    'P': [[[5, 0], [5, 40], [25, 40], [30, 35], [30, 25], [25, 20], [5, 20]]],
-                    'Q': [[[15, 0], [25, 0], [30, 5], [30, 35], [25, 40], [15, 40], [10, 35], [10, 5], [15, 0]], [[22, 25], [30, 10]]],
-                    'R': [[[5, 0], [5, 40], [25, 40], [30, 35], [30, 25], [25, 20], [5, 20]], [[18, 20], [30, 0]]],
-                    'S': [[[30, 5], [25, 0], [15, 0], [10, 5], [10, 15], [15, 20], [25, 20], [30, 25], [30, 35], [25, 40], [15, 40], [10, 35]]],
-                    'T': [[[10, 40], [30, 40]], [[20, 0], [20, 40]]],
-                    'U': [[[5, 40], [5, 10], [10, 5], [25, 5], [30, 10], [30, 40]]],
-                    'V': [[[5, 40], [17, 0], [30, 40]]],
-                    'W': [[[5, 40], [12, 0], [17, 15], [22, 0], [30, 40]]],
-                    'X': [[[5, 0], [30, 40]], [[30, 0], [5, 40]]],
-                    'Y': [[[5, 40], [17, 22], [30, 40]], [[17, 22], [17, 0]]],
-                    'Z': [[[5, 40], [30, 40], [5, 0], [30, 0]]],
-                    '0': [[[15, 0], [25, 0], [30, 5], [30, 35], [25, 40], [15, 40], [10, 35], [10, 5], [15, 0]]],
-                    '1': [[[17, 0], [17, 40]], [[12, 35], [17, 40]]],
-                    '2': [[[10, 35], [15, 40], [25, 40], [30, 35], [30, 25], [10, 0], [30, 0]]],
-                    '3': [[[10, 35], [15, 40], [25, 40], [30, 35], [30, 25], [25, 20], [30, 15], [30, 5], [25, 0], [15, 0], [10, 5]], [[20, 20], [25, 20]]],
-                    '4': [[[5, 40], [5, 15], [25, 15]], [[25, 0], [25, 40]]],
-                    '5': [[[30, 40], [10, 40], [10, 22], [25, 22], [30, 17], [30, 5], [25, 0], [15, 0], [10, 5]]],
-                    '6': [[[25, 40], [15, 40], [10, 35], [10, 5], [15, 0], [25, 0], [30, 5], [30, 15], [25, 20], [15, 20], [10, 15]]],
-                    '7': [[[10, 40], [30, 40], [15, 0]]],
-                    '8': [[[15, 0], [25, 0], [30, 5], [30, 15], [25, 20], [30, 25], [30, 35], [25, 40], [15, 40], [10, 35], [10, 25], [15, 20], [10, 15], [10, 5], [15, 0]], [[15, 20], [25, 20]]],
-                    '9': [[[15, 0], [25, 0], [30, 5], [30, 35], [25, 40], [15, 40], [10, 35], [10, 25], [15, 20], [25, 20], [30, 25]]],
-                    ' ': [], // Space has no path
-                    '.': [[[17, 3], [23, 3], [23, 9], [17, 9], [17, 3]]],
-                    ',': [[[17, 3], [23, 3], [23, 9], [17, 9], [17, 3]], [[20, 3], [18, -3]]],
-                    '!': [[[18, 12], [22, 12], [22, 40], [18, 40], [18, 12]], [[17, 3], [23, 3], [23, 9], [17, 9], [17, 3]]],
-                    '?': [[[10, 30], [15, 40], [25, 40], [30, 35], [30, 25], [20, 15], [20, 12]], [[17, 3], [23, 3], [23, 9], [17, 9], [17, 3]]]
+
+            // Build an animated Lottie property from [{t, v}] keyframes
+            function av(kfs, ease) {
+                const preset = ({
+                    'ease-out':    { i: { x: [0.0], y: [1.0]  }, o: { x: [0.4], y: [0.0]  } },
+                    'ease-in':     { i: { x: [0.6], y: [0.0]  }, o: { x: [1.0], y: [1.0]  } },
+                    'ease-in-out': { i: { x: [0.42], y: [0.0] }, o: { x: [0.58], y: [1.0] } },
+                    'spring':      { i: { x: [0.0], y: [1.15] }, o: { x: [0.3], y: [0.0]  } }
+                })[ease] || { i: { x: [0.5], y: [0.5] }, o: { x: [0.5], y: [0.5] } };
+
+                const clean = dedup(kfs);
+                return {
+                    a: 1,
+                    k: clean.map((kf, i) => {
+                        const s = Array.isArray(kf.v) ? kf.v : [kf.v];
+                        if (i < clean.length - 1) {
+                            const e = Array.isArray(clean[i + 1].v) ? clean[i + 1].v : [clean[i + 1].v];
+                            return { t: kf.t, s, e, i: preset.i, o: preset.o };
+                        }
+                        return { t: kf.t, s, h: 1 };
+                    })
                 };
-                
-                return letterPaths[char.toUpperCase()] || [[[5, 0], [5, 40], [30, 40], [30, 0], [5, 0]]]; // Default rectangle
             }
 
-            // Convert path points to Lottie path format
-            function pointsToLottiePath(pathArray) {
-                if (!pathArray || pathArray.length === 0) return null;
-                
-                const shapes = [];
-                
-                pathArray.forEach((path, pathIndex) => {
-                    if (path.length < 2) return;
-                    
-                    const vertices = [];
-                    const inTangents = [];
-                    const outTangents = [];
-                    
-                    path.forEach(point => {
-                        vertices.push(point);
-                        inTangents.push([0, 0]); // No curves for now, just straight lines
-                        outTangents.push([0, 0]);
+            // Lottie text-document object (used in t.d.k keyframes)
+            function textDoc(str) {
+                return {
+                    sz: [CW, CH],
+                    ps: [-CW / 2, -CH / 2],
+                    t:  str || ' ',
+                    f:  FONT_NAME,
+                    s:  FONT_SIZE,
+                    j:  2,              // centre-align
+                    tr: 0,
+                    lh: FONT_SIZE * 1.2,
+                    ls: 0,
+                    fc: fc
+                };
+            }
+
+            // Build a Lottie text layer (ty: 5)
+            function makeLayer(idx, str, ks, textKfs) {
+                return {
+                    ddd: 0, ind: idx, ty: 5, nm: 'L' + idx, sr: 1,
+                    ks: {
+                        o: ks.o || sv(100),
+                        r: ks.r || sv(0),
+                        p: ks.p || sv([CW / 2, TEXT_Y, 0]),
+                        a: sv([0, 0, 0]),
+                        s: ks.s || sv([100, 100, 100])
+                    },
+                    ao: 0,
+                    t: {
+                        d: { k: textKfs || [{ s: textDoc(str), t: 0 }] },
+                        p: {},
+                        m: { g: 1, a: sv([0, 0]) },
+                        a: []
+                    },
+                    ip: 0, op: TOTAL_F, st: 0, bm: 0
+                };
+            }
+
+            // Measure per-unit canvas x-positions using the browser Canvas API
+            // Returns [{unit, x}] for every non-space unit, with x in canvas coordinates
+            function measureUnits(isWords) {
+                const cvs = document.createElement('canvas');
+                const ctx = cvs.getContext('2d');
+                ctx.font = FONT_SIZE + 'px Inter, Arial, sans-serif';
+                const totalW = ctx.measureText(animText).width;
+                let curX = -totalW / 2;
+                const result = [];
+
+                if (isWords) {
+                    animText.split(' ').forEach((word, wi, arr) => {
+                        const ww = ctx.measureText(word).width;
+                        if (word !== '') result.push({ unit: word, x: CW / 2 + curX + ww / 2 });
+                        curX += ww + (wi < arr.length - 1 ? ctx.measureText(' ').width : 0);
                     });
-                    
-                    shapes.push({
-                        "ty": "sh",
-                        "ks": {
-                            "a": 0,
-                            "k": {
-                                "i": inTangents,
-                                "o": outTangents,
-                                "v": vertices,
-                                "c": true
-                            },
-                            "ix": 2
-                        },
-                        "nm": `Path ${pathIndex + 1}`,
-                        "hd": false
-                    });
+                } else {
+                    for (let i = 0; i < animText.length; i++) {
+                        const ch  = animText[i];
+                        const chw = ctx.measureText(ch).width;
+                        if (ch !== ' ') result.push({ unit: ch, x: CW / 2 + curX + chw / 2 });
+                        curX += chw;
+                    }
+                }
+                return result;
+            }
+
+            // ── Layer generation ──────────────────────────────────────────────
+            const layers = [];
+            const words  = animText.split(' ').filter(w => w);
+
+            if (style === 'typing') {
+                // Single layer; text-document content steps forward each frame-group
+                const units  = typeBy === 'word' ? words : animText.split('');
+                const fpStep = TOTAL_F / Math.max(units.length, 1);
+                const textKfs = [];
+
+                for (let i = 0; i <= units.length; i++) {
+                    let str;
+                    if (direction === 'forward') {
+                        str = typeBy === 'word' ? units.slice(0, i).join(' ') : animText.slice(0, i);
+                    } else {
+                        str = typeBy === 'word'
+                            ? units.slice(units.length - i).join(' ')
+                            : animText.slice(animText.length - i);
+                    }
+                    textKfs.push({ s: textDoc(str || ' '), t: Math.round(i * fpStep) });
+                }
+                layers.push(makeLayer(1, animText, {}, textKfs));
+
+            } else if (style === 'scale') {
+                // Single layer; scale + opacity
+                const grow = direction === 'forward';
+                layers.push(makeLayer(1, animText, {
+                    s: grow
+                        ? av([{ t: 0, v: [0, 0, 100] },   { t: TOTAL_F, v: [100, 100, 100] }], 'spring')
+                        : av([{ t: 0, v: [100, 100, 100] }, { t: TOTAL_F, v: [0, 0, 100]   }], 'ease-in'),
+                    o: grow
+                        ? av([{ t: 0, v: 0 }, { t: Math.round(TOTAL_F * 0.25), v: 100 }], 'ease-out')
+                        : av([{ t: Math.round(TOTAL_F * 0.75), v: 100 }, { t: TOTAL_F, v: 0 }], 'ease-in')
+                }));
+
+            } else if (style === 'rotate') {
+                // Single layer; full 360° spin
+                // forward = clockwise (0 → 360), backwards = counter-clockwise (0 → -360)
+                const deg = direction === 'forward' ? 360 : -360;
+                layers.push(makeLayer(1, animText, {
+                    r: av([{ t: 0, v: 0 }, { t: TOTAL_F, v: deg }], 'ease-in-out'),
+                    o: av([{ t: 0, v: 0 }, { t: Math.round(TOTAL_F * 0.25), v: 100 }], 'ease-out')
+                }));
+
+            } else if (style === 'fade') {
+                // Per-unit stagger; forward = fade-in, backwards = fade-out
+                const fadeIn  = direction === 'forward';
+                const isWords = typeBy === 'word';
+                const units   = measureUnits(isWords);
+                const N       = units.length;
+                const fadeDur = Math.max(4, Math.round(TOTAL_F * 0.3));
+                const span    = TOTAL_F - fadeDur;
+
+                units.forEach(({ unit, x }, i) => {
+                    const orderIdx = direction === 'forward' ? i : (N - 1 - i);
+                    const startT   = N > 1 ? Math.round((orderIdx / (N - 1)) * span) : 0;
+                    const endT     = Math.min(TOTAL_F, startT + fadeDur);
+                    layers.push(makeLayer(i + 1, unit, {
+                        p: sv([x, TEXT_Y, 0]),
+                        o: fadeIn
+                            ? av([{ t: 0, v: 0 }, { t: startT, v: 0 }, { t: endT, v: 100 }], 'ease-out')
+                            : av([{ t: 0, v: 100 }, { t: startT, v: 100 }, { t: endT, v: 0 }], 'ease-in')
+                    }));
                 });
-                
-                return shapes;
-            }
 
-            // Generate character layers with actual letter shapes
-            function generateCharacterLayers() {
-                const layers = [];
-                const chars = animText.split('');
-                const charWidth = 45; // Width per character including spacing
-                const startX = 256 - (animText.length * charWidth) / 2; // Center the text
-                
-                chars.forEach((char, index) => {
-                    const charPaths = getLetterPath(char);
-                    if (char === ' ' || charPaths.length === 0) return; // Skip spaces and empty chars
-                    
-                    const charX = startX + (index * charWidth);
-                    const delayTime = (index / chars.length) * totalFrames;
-                    const letterShapes = pointsToLottiePath(charPaths);
-                    
-                    if (!letterShapes) return;
-                    
-                    // Create shape items array
-                    const shapeItems = [...letterShapes];
-                    
-                    // Add fill
-                    shapeItems.push({
-                        "ty": "fl",
-                        "c": {"a": 0, "k": hexToRgbArray(animationSettings.color), "ix": 4},
-                        "o": {"a": 0, "k": 100, "ix": 5},
-                        "r": 1,
-                        "bm": 0,
-                        "nm": "Fill 1",
-                        "hd": false
-                    });
-                    
-                    // Add transform
-                    shapeItems.push({
-                        "ty": "tr",
-                        "p": {"a": 0, "k": [0, 0], "ix": 2},
-                        "a": {"a": 0, "k": [0, 0], "ix": 1},
-                        "s": {"a": 0, "k": [100, 100], "ix": 3},
-                        "r": {"a": 0, "k": 0, "ix": 6},
-                        "o": {"a": 0, "k": 100, "ix": 7},
-                        "sk": {"a": 0, "k": 0, "ix": 4},
-                        "sa": {"a": 0, "k": 0, "ix": 5},
-                        "nm": "Transform"
-                    });
-                    
-                    layers.push({
-                        "ddd": 0,
-                        "ind": index + 1,
-                        "ty": 4,
-                        "nm": `Letter_${char}_${index}`,
-                        "sr": 1,
-                        "ks": {
-                            "o": {
-                                "a": 1,
-                                "k": [
-                                    {"t": 0, "s": [0]},
-                                    {"t": Math.round(delayTime), "s": [0]},
-                                    {"t": Math.round(delayTime + 5), "s": [100]}
-                                ],
-                                "ix": 11
-                            },
-                            "r": {
-                                "a": 0,
-                                "k": 0,
-                                "ix": 10
-                            },
-                            "p": {
-                                "a": 0,
-                                "k": [charX, 256, 0],
-                                "ix": 2
-                            },
-                            "a": {
-                                "a": 0,
-                                "k": [20, 20, 0],
-                                "ix": 1
-                            },
-                            "s": {
-                                "a": 0,
-                                "k": [100, 100, 100],
-                                "ix": 6
-                            }
-                        },
-                        "ao": 0,
-                        "shapes": [
-                            {
-                                "ty": "gr",
-                                "it": shapeItems,
-                                "nm": "Letter Group",
-                                "np": letterShapes.length + 1,
-                                "cix": 2,
-                                "bm": 0,
-                                "ix": 1,
-                                "hd": false
-                            }
-                        ],
-                        "ip": 0,
-                        "op": totalFrames,
-                        "st": 0,
-                        "bm": 0
-                    });
-                });
-                
-                return layers;
-            }
-
-            // Generate opacity keyframes for shape-based animation
-            function generateOpacityKeyframes() {
-                const opacityFrames = [];
-                const chars = animText.split('');
-                const stepSize = totalFrames / chars.length;
-
-                for (let i = 0; i <= chars.length; i++) {
-                    const time = Math.round(i * stepSize);
-                    const progress = i / chars.length;
-                    
-                    // Create typing effect with opacity
-                    const opacity = animationSettings.direction === 'forward' 
-                        ? Math.min(progress * 100, 100)
-                        : Math.max((1 - progress) * 100, 0);
-
-                    opacityFrames.push({
-                        "t": time,
-                        "s": [opacity],
-                        "e": [opacity]
-                    });
+                // Fallback: whole-text fade if no units were produced
+                if (layers.length === 0) {
+                    layers.push(makeLayer(1, animText, {
+                        o: fadeIn
+                            ? av([{ t: 0, v: 0 }, { t: TOTAL_F, v: 100 }], 'ease-out')
+                            : av([{ t: 0, v: 100 }, { t: TOTAL_F, v: 0 }], 'ease-in')
+                    }));
                 }
 
-                return opacityFrames;
+            } else if (style === 'slide') {
+                // Per-unit; every unit slides from the SAME direction (spring ease), stagger order
+                // direction=forward  → slide UP from below, stagger left→right
+                // direction=backwards → slide DOWN from above, stagger right→left
+                const isWords  = typeBy === 'word';
+                const units    = measureUnits(isWords);
+                const N        = units.length;
+                const OFFSET   = 80;
+                const slideDur = Math.max(6, Math.round(TOTAL_F * 0.45));
+                const span     = TOTAL_F - slideDur;
+
+                units.forEach(({ unit, x }, i) => {
+                    const orderIdx = direction === 'forward' ? i : (N - 1 - i);
+                    const startT   = N > 1 ? Math.round((orderIdx / (N - 1)) * span) : 0;
+                    const endT     = Math.min(TOTAL_F, startT + slideDur);
+                    const startY   = direction === 'forward' ? TEXT_Y + OFFSET : TEXT_Y - OFFSET;
+
+                    layers.push(makeLayer(i + 1, unit, {
+                        p: av([
+                            { t: 0,      v: [x, startY, 0] },
+                            { t: startT, v: [x, startY, 0] },
+                            { t: endT,   v: [x, TEXT_Y, 0] }
+                        ], 'spring'),
+                        o: av([
+                            { t: 0,      v: 0 },
+                            { t: startT, v: 0 },
+                            { t: Math.min(TOTAL_F, startT + Math.round(slideDur * 0.4)), v: 100 }
+                        ], 'ease-out')
+                    }));
+                });
+
+                // Fallback: whole-text slide if no units were produced
+                if (layers.length === 0) {
+                    layers.push(makeLayer(1, animText, {
+                        p: av([
+                            { t: 0,       v: [CW / 2, TEXT_Y + 80, 0] },
+                            { t: TOTAL_F, v: [CW / 2, TEXT_Y,      0] }
+                        ], 'spring'),
+                        o: av([{ t: 0, v: 0 }, { t: Math.round(TOTAL_F * 0.35), v: 100 }], 'ease-out')
+                    }));
+                }
             }
-            
-            // Create Lottie JSON structure with proper text layer format
-            const textColor = hexToRgbArray(animationSettings.color);
-            console.log('DEBUG: Text color for Lottie:', textColor);
-            
-            console.log('DEBUG: Using shape-based animation approach');
-            
+
+            // Ultimate fallback – static text layer
+            if (layers.length === 0) {
+                layers.push(makeLayer(1, animText, {}));
+            }
+
+            // ── Assemble Lottie JSON ──────────────────────────────────────────
             const lottieData = {
-                "v": "5.5.7",
-                "fr": frameRate,
-                "ip": 0,
-                "op": totalFrames,
-                "w": 512,
-                "h": 512,
-                "nm": `TextFx_${animationSettings.style}`,
-                "ddd": 0,
-                "assets": [],
-                "layers": generateCharacterLayers(),
-                "markers": [],
-                "meta": {
-                    "g": "TextFx Plugin v1.0",
-                    "a": "Text Fx",
-                    "k": animationSettings.style,
-                    "d": `Text animation: ${animText}`,
-                    "tc": ""
-                }
+                v: '5.5.7',
+                fr: FR,
+                ip: 0,
+                op: TOTAL_F,
+                w:  CW,
+                h:  CH,
+                nm: 'TextFx_' + style,
+                ddd: 0,
+                assets: [],
+                fonts: {
+                    list: [{
+                        fName:   FONT_NAME,
+                        fFamily: fontFamily,
+                        fStyle:  fontStyle,
+                        fPath:   `https://fonts.googleapis.com/css2?family=${fontFamily.replace(/\s+/g, '+')}:wght@${fontWeight}&display=swap`,
+                        fClass:  '',
+                        ascent:  74,
+                        fWeight: '',
+                        origin:  1
+                    }]
+                },
+                layers: layers,
+                markers: []
             };
-            
-            // Note: Cursor removed to fix animation preview issue
-            // The text animation should be the primary focus
-            
-            console.log('DEBUG: Final Lottie structure with all details:', lottieData);
-            
-            // Create and download the Lottie JSON file
-            const jsonString = JSON.stringify(lottieData, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const link = document.createElement('a');
-            link.href = url;
-            
-            // Create filename in format: [text-layer-name/typed-word]-text-fx-lottie.json
-            const textContent = selectedLayerName || selectedText.trim() || 'sample-text';
-            const sanitizedText = textContent
+
+            // ── Download ──────────────────────────────────────────────────────
+            const jsonStr = JSON.stringify(lottieData, null, 2);
+            const blob    = new Blob([jsonStr], { type: 'application/json' });
+            const blobUrl = URL.createObjectURL(blob);
+            const anchor  = document.createElement('a');
+            anchor.href   = blobUrl;
+            const safeName = animText.trim()
                 .toLowerCase()
-                .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
-                .replace(/\s+/g, '-') // Replace spaces with hyphens
-                .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-                .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
-            
-            link.download = `${sanitizedText}-text-fx-lottie.json`;
-            document.body.appendChild(link);
-            link.click();
-            
-            // Clean up
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-            
-            console.log('Animation exported as Lottie JSON:', lottieData);
+                .replace(/[^a-z0-9\s]/g, '')
+                .replace(/\s+/g, '-')
+                .slice(0, 30) || 'text-fx';
+            anchor.download = safeName + '-lottie.json';
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            URL.revokeObjectURL(blobUrl);
         }
 
         function submitFeedback() {
@@ -2294,6 +2886,12 @@
             if (elements.styleSelect && elements.selectTooltip) {
                 setupSelectTooltip();
             }
+
+            setupFontPicker();
+            setupFontSizePicker();
+            setupAlignmentPicker();
+            setupCasePicker();
+            setupStylesPicker();
             
             if (elements.durationInput) {
                 // Update animation settings when user types in duration field
@@ -2322,21 +2920,20 @@
             document.querySelectorAll('input[name="direction"]').forEach(radio => {
                 radio.addEventListener('change', updateAnimation);
             });
+
+            document.querySelectorAll('input[name="rotate-dir"]').forEach(radio => {
+                radio.addEventListener('change', updateAnimation);
+            });
             
             // Buttons
             if (elements.createBtn) {
                 elements.createBtn.addEventListener('click', createComponent);
             }
             
-            // Export JSON button - temporarily disabled
+            // Export JSON button
             const exportJsonBtn = document.getElementById('export-json-btn');
             if (exportJsonBtn) {
-                // Disabled for now with coming soon state
-                // exportJsonBtn.addEventListener('click', exportAnimationAsJSON);
-                exportJsonBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    console.log('Export JSON feature coming soon!');
-                });
+                exportJsonBtn.addEventListener('click', exportAnimationAsJSON);
             }
             
             const closeBtn = document.getElementById('close-btn');
@@ -2372,6 +2969,9 @@
                     break;
                 case 'prototype-ready':
                     handlePrototypeReady(data);
+                    break;
+                case 'text-styles':
+                    localTextStyles = data || [];
                     break;
                 default:
                     break;
@@ -2420,7 +3020,7 @@
                 if (elements.animateBtn) {
                     elements.animateBtn.disabled = cleanText.length > 100;
                 }
-                
+
             } else {
                 // No text layer selected - reset to input mode
                 selectedLayerName = '';
@@ -2486,13 +3086,13 @@
             const cleanText = text.replace(/\n|\r\n|\r/g, '');
             const charCount = cleanText.length;
             const remaining = 100 - charCount;
-            
+
             // Update counter display
             counter.textContent = `${charCount}/100`;
-            
+
             // Update default duration based on character count
             updateDefaultDuration(charCount);
-            
+
             // Update counter color based on character count
             counter.classList.remove('warning', 'error');
             if (charCount >= 100) {
@@ -2595,6 +3195,9 @@
             const elements = getDOMElements();
             if (!elements.chooseSection || !elements.previewSection) return;
 
+            // Refresh text styles from the document when entering preview
+            parent.postMessage({ pluginMessage: { type: 'get-text-styles' } }, '*');
+
             elements.chooseSection.classList.add('hiding');
 
             setTimeout(() => {
@@ -2607,11 +3210,18 @@
             if (elements.step1) elements.step1.classList.remove('active');
             if (elements.step2) elements.step2.classList.add('active');
             
-            // Set preview text
+            // Set preview text with current font/size settings
             if (elements.previewText) {
                 elements.previewText.textContent = selectedText.trim();
                 elements.previewText.style.color = animationSettings.color;
                 elements.previewText.className = 'preview-text';
+                if (animationSettings.font) {
+                    elements.previewText.style.fontFamily = `'${animationSettings.font.family}', sans-serif`;
+                    elements.previewText.style.fontWeight = animationSettings.font.weight || 400;
+                }
+                if (animationSettings.fontSize) {
+                    elements.previewText.style.fontSize = `${animationSettings.fontSize}px`;
+                }
             }
             
             // Ensure play/pause button is visible
@@ -2658,9 +3268,707 @@
         }, 0); // Wait for fade out
         }
 
+        function loadGoogleFont(family, weight) {
+            const w = weight || 400;
+            const id = 'gfont-' + family.replace(/\s+/g, '-').toLowerCase() + '-' + w;
+            if (!document.getElementById(id)) {
+                const link = document.createElement('link');
+                link.id = id;
+                link.rel = 'stylesheet';
+                link.href = `https://fonts.googleapis.com/css2?family=${family.replace(/\s+/g, '+')}:wght@${w}&display=swap`;
+                document.head.appendChild(link);
+            }
+        }
+
+        function applyFontToPreview(family, weight) {
+            const previewText = document.getElementById('preview-text');
+            if (previewText) {
+                previewText.style.fontFamily = `'${family}', sans-serif`;
+                previewText.style.fontWeight = weight || 400;
+            }
+        }
+
+        function updateWeightOptions(family) {
+            const weightDropdown = document.getElementById('font-weight-dropdown');
+            if (!weightDropdown) return;
+            const fontData = GOOGLE_FONTS.find(f => f.family === family);
+            const weights = fontData ? fontData.weights : [400];
+            weightDropdown.innerHTML = '';
+            const currentWeight = animationSettings.font ? animationSettings.font.weight || 400 : 400;
+            weights.forEach(w => {
+                const option = document.createElement('div');
+                option.className = 'weight-option' + (w === currentWeight ? ' active' : '');
+                option.textContent = WEIGHT_NAMES[w] || String(w);
+                option.dataset.weight = w;
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectWeight(w);
+                    weightDropdown.classList.remove('open');
+                });
+                weightDropdown.appendChild(option);
+            });
+        }
+
+        function setupFontPicker() {
+            const fontBtn = document.getElementById('font-picker-btn');
+            const weightBtn = document.getElementById('font-weight-btn');
+            if (!fontBtn || !weightBtn) return;
+
+            // ── Font dropdown ────────────────────────────────────────────────
+            const fontDropdown = document.createElement('div');
+            fontDropdown.id = 'font-picker-dropdown';
+            fontDropdown.className = 'font-picker-dropdown';
+
+            // Search input
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.className = 'font-search-input';
+            searchInput.placeholder = 'Search fonts...';
+            fontDropdown.appendChild(searchInput);
+
+            // Scrollable list container
+            const optionsList = document.createElement('div');
+            optionsList.className = 'font-options-list';
+            fontDropdown.appendChild(optionsList);
+
+            // Populate font options
+            GOOGLE_FONTS.forEach(font => {
+                const option = document.createElement('div');
+                option.className = 'font-option' + (font.family === 'Inter' ? ' active' : '');
+                option.textContent = font.family;
+                option.dataset.family = font.family;
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectFont(font.family);
+                    fontDropdown.classList.remove('open');
+                });
+                optionsList.appendChild(option);
+            });
+
+            document.body.appendChild(fontDropdown);
+
+            // Lazy-load font preview as options scroll into view
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const family = entry.target.dataset.family;
+                        if (family) {
+                            loadGoogleFont(family, 400);
+                            entry.target.style.fontFamily = `'${family}', sans-serif`;
+                            observer.unobserve(entry.target);
+                        }
+                    }
+                });
+            }, { root: optionsList, threshold: 0 });
+            optionsList.querySelectorAll('.font-option').forEach(opt => observer.observe(opt));
+
+            // Search filtering
+            searchInput.addEventListener('input', (e) => {
+                e.stopPropagation();
+                const query = searchInput.value.toLowerCase();
+                optionsList.querySelectorAll('.font-option').forEach(opt => {
+                    const match = opt.dataset.family.toLowerCase().includes(query);
+                    opt.style.display = match ? '' : 'none';
+                });
+            });
+            searchInput.addEventListener('click', e => e.stopPropagation());
+            searchInput.addEventListener('keydown', e => e.stopPropagation());
+
+            // ── Weight dropdown ──────────────────────────────────────────────
+            const weightDropdown = document.createElement('div');
+            weightDropdown.id = 'font-weight-dropdown';
+            weightDropdown.className = 'font-weight-dropdown';
+            document.body.appendChild(weightDropdown);
+
+            // ── Toggle font dropdown ─────────────────────────────────────────
+            fontBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                weightDropdown.classList.remove('open');
+                const rect = fontBtn.getBoundingClientRect();
+                fontDropdown.style.top = `${rect.bottom + 4}px`;
+                fontDropdown.style.left = `${rect.left}px`;
+                const isOpening = !fontDropdown.classList.contains('open');
+                fontDropdown.classList.toggle('open');
+                if (isOpening) {
+                    searchInput.value = '';
+                    optionsList.querySelectorAll('.font-option').forEach(opt => opt.style.display = '');
+                    searchInput.focus();
+                    const active = optionsList.querySelector('.font-option.active');
+                    if (active) active.scrollIntoView({ block: 'nearest' });
+                }
+            });
+
+            // ── Toggle weight dropdown ───────────────────────────────────────
+            weightBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fontDropdown.classList.remove('open');
+                const rect = weightBtn.getBoundingClientRect();
+                weightDropdown.style.top = `${rect.bottom + 4}px`;
+                weightDropdown.style.left = `${rect.left}px`;
+                weightDropdown.classList.toggle('open');
+            });
+
+            // Close all font dropdowns on outside click
+            document.addEventListener('click', () => {
+                fontDropdown.classList.remove('open');
+                weightDropdown.classList.remove('open');
+                const sd = document.getElementById('font-size-dropdown');
+                if (sd) sd.classList.remove('open');
+                const ad = document.getElementById('font-align-dropdown');
+                if (ad) ad.classList.remove('open');
+                const cd = document.getElementById('font-case-dropdown');
+                if (cd) cd.classList.remove('open');
+                const tsd = document.getElementById('text-style-dropdown');
+                if (tsd) tsd.classList.remove('open');
+            });
+
+            // Initialize weight options for default font
+            updateWeightOptions('Inter');
+        }
+
+        function selectFont(family) {
+            clearTextStyle();
+            animationSettings.font = { family, style: 'Regular', weight: 400 };
+
+            const fontBtn = document.getElementById('font-picker-btn');
+            if (fontBtn) fontBtn.textContent = family;
+
+            const weightBtn = document.getElementById('font-weight-btn');
+            if (weightBtn) weightBtn.textContent = 'Regular';
+
+            const fontDropdown = document.getElementById('font-picker-dropdown');
+            if (fontDropdown) {
+                fontDropdown.querySelectorAll('.font-option').forEach(opt => {
+                    opt.classList.toggle('active', opt.dataset.family === family);
+                });
+            }
+
+            updateWeightOptions(family);
+            loadGoogleFont(family, 400);
+            applyFontToPreview(family, 400);
+            updateAnimation();
+        }
+
+        function selectWeight(weight) {
+            if (!animationSettings.font) return;
+            clearTextStyle();
+            animationSettings.font.weight = weight;
+            animationSettings.font.style = WEIGHT_NAMES[weight] || 'Regular';
+
+            const weightBtn = document.getElementById('font-weight-btn');
+            if (weightBtn) weightBtn.textContent = WEIGHT_NAMES[weight] || String(weight);
+
+            const weightDropdown = document.getElementById('font-weight-dropdown');
+            if (weightDropdown) {
+                weightDropdown.querySelectorAll('.weight-option').forEach(opt => {
+                    opt.classList.toggle('active', parseInt(opt.dataset.weight) === weight);
+                });
+            }
+
+            loadGoogleFont(animationSettings.font.family, weight);
+            applyFontToPreview(animationSettings.font.family, weight);
+            updateAnimation();
+        }
+
+        const FONT_SIZE_PRESETS = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64, 72, 80, 96];
+
+        function setupFontSizePicker() {
+            const sizeBtn = document.getElementById('font-size-btn');
+            if (!sizeBtn) return;
+
+            const sizeDropdown = document.createElement('div');
+            sizeDropdown.id = 'font-size-dropdown';
+            sizeDropdown.className = 'font-weight-dropdown'; // reuse same styles
+
+            // Custom size input
+            const sizeInput = document.createElement('input');
+            sizeInput.type = 'number';
+            sizeInput.className = 'font-size-input';
+            sizeInput.placeholder = 'Custom size...';
+            sizeInput.min = 6;
+            sizeInput.max = 200;
+            sizeDropdown.appendChild(sizeInput);
+
+            // Preset size options
+            FONT_SIZE_PRESETS.forEach(size => {
+                const option = document.createElement('div');
+                option.className = 'weight-option' + (size === 16 ? ' active' : '');
+                option.textContent = size;
+                option.dataset.size = size;
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectFontSize(size);
+                    sizeDropdown.classList.remove('open');
+                });
+                sizeDropdown.appendChild(option);
+            });
+
+            document.body.appendChild(sizeDropdown);
+
+            // Commit custom input on Enter or blur
+            function commitCustomSize() {
+                const val = parseInt(sizeInput.value);
+                if (val >= 6 && val <= 200) {
+                    selectFontSize(val);
+                    sizeDropdown.classList.remove('open');
+                }
+            }
+            sizeInput.addEventListener('keydown', (e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter') commitCustomSize();
+            });
+            sizeInput.addEventListener('blur', commitCustomSize);
+            sizeInput.addEventListener('click', e => e.stopPropagation());
+
+            // Toggle dropdown
+            sizeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('font-picker-dropdown').classList.remove('open');
+                document.getElementById('font-weight-dropdown').classList.remove('open');
+                const rect = sizeBtn.getBoundingClientRect();
+                sizeDropdown.style.top = `${rect.bottom + 4}px`;
+                sizeDropdown.style.left = `${rect.left}px`;
+                const isOpening = !sizeDropdown.classList.contains('open');
+                sizeDropdown.classList.toggle('open');
+                if (isOpening) {
+                    sizeInput.value = '';
+                    sizeInput.focus();
+                    const active = sizeDropdown.querySelector('.weight-option.active');
+                    if (active) active.scrollIntoView({ block: 'nearest' });
+                }
+            });
+
+            // Close on outside click (piggybacks existing listener)
+        }
+
+        function selectFontSize(size) {
+            clearTextStyle();
+            animationSettings.fontSize = size;
+
+            const sizeBtn = document.getElementById('font-size-btn');
+            if (sizeBtn) sizeBtn.textContent = size;
+
+            const sizeDropdown = document.getElementById('font-size-dropdown');
+            if (sizeDropdown) {
+                sizeDropdown.querySelectorAll('.weight-option').forEach(opt => {
+                    opt.classList.toggle('active', parseInt(opt.dataset.size) === size);
+                });
+            }
+
+            const previewText = document.getElementById('preview-text');
+            if (previewText) previewText.style.fontSize = `${size}px`;
+            updateAnimation();
+        }
+
+        const ALIGN_ICONS = {
+            left:   `<svg width="14" height="11" viewBox="0 0 14 11" fill="none"><rect x="0" y="0" width="14" height="1.8" rx="0.9" fill="currentColor"/><rect x="0" y="4.6" width="9" height="1.8" rx="0.9" fill="currentColor"/><rect x="0" y="9.2" width="11" height="1.8" rx="0.9" fill="currentColor"/></svg>`,
+            center: `<svg width="14" height="11" viewBox="0 0 14 11" fill="none"><rect x="0" y="0" width="14" height="1.8" rx="0.9" fill="currentColor"/><rect x="2.5" y="4.6" width="9" height="1.8" rx="0.9" fill="currentColor"/><rect x="1" y="9.2" width="12" height="1.8" rx="0.9" fill="currentColor"/></svg>`,
+            right:  `<svg width="14" height="11" viewBox="0 0 14 11" fill="none"><rect x="0" y="0" width="14" height="1.8" rx="0.9" fill="currentColor"/><rect x="5" y="4.6" width="9" height="1.8" rx="0.9" fill="currentColor"/><rect x="2" y="9.2" width="12" height="1.8" rx="0.9" fill="currentColor"/></svg>`,
+            top:    `<svg width="14" height="12" viewBox="0 0 14 12" fill="none"><rect x="0" y="0" width="14" height="2" rx="0.6" fill="currentColor"/><rect x="1" y="4" width="12" height="1.6" rx="0.8" fill="currentColor"/><rect x="2.5" y="7.2" width="9" height="1.6" rx="0.8" fill="currentColor"/></svg>`,
+            middle: `<svg width="14" height="12" viewBox="0 0 14 12" fill="none"><rect x="1" y="1" width="12" height="1.6" rx="0.8" fill="currentColor"/><rect x="0" y="5" width="14" height="2" rx="0.6" fill="currentColor"/><rect x="1" y="8.6" width="12" height="1.6" rx="0.8" fill="currentColor"/></svg>`,
+            bottom: `<svg width="14" height="12" viewBox="0 0 14 12" fill="none"><rect x="2.5" y="0.5" width="9" height="1.6" rx="0.8" fill="currentColor"/><rect x="1" y="4" width="12" height="1.6" rx="0.8" fill="currentColor"/><rect x="0" y="8.5" width="14" height="2" rx="0.6" fill="currentColor"/></svg>`
+        };
+
+        const HORIZONTAL_ALIGNS = ['left', 'center', 'right'];
+        const VERTICAL_ALIGNS   = ['top', 'middle', 'bottom'];
+
+        const ALIGN_OPTIONS = [
+            { value: 'left',   label: 'Align Left' },
+            { value: 'center', label: 'Align Center' },
+            { value: 'right',  label: 'Align Right' },
+            { value: 'top',    label: 'Align Top' },
+            { value: 'middle', label: 'Align Middle' },
+            { value: 'bottom', label: 'Align Bottom' }
+        ];
+
+        function setupAlignmentPicker() {
+            const alignBtn = document.getElementById('font-align-btn');
+            if (!alignBtn) return;
+
+            const dropdown = document.createElement('div');
+            dropdown.id = 'font-align-dropdown';
+            dropdown.className = 'font-weight-dropdown';
+
+            ALIGN_OPTIONS.forEach(({ value, label }, i) => {
+                // Divider between horizontal and vertical groups
+                if (i === 3) {
+                    const sep = document.createElement('div');
+                    sep.style.cssText = 'height:1px;background:#3F3F46;margin:4px 8px;';
+                    dropdown.appendChild(sep);
+                }
+
+                const option = document.createElement('div');
+                option.className = 'weight-option';
+                const isActive = value === animationSettings.textAlign || value === animationSettings.verticalAlign;
+                if (isActive) option.classList.add('active');
+                option.dataset.align = value;
+                option.style.display = 'flex';
+                option.style.alignItems = 'center';
+                option.style.gap = '8px';
+                option.innerHTML = `<span style="display:flex;align-items:center;">${ALIGN_ICONS[value]}</span><span>${label}</span>`;
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectAlignment(value);
+                    dropdown.classList.remove('open');
+                });
+                dropdown.appendChild(option);
+            });
+
+            document.body.appendChild(dropdown);
+
+            alignBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('font-picker-dropdown').classList.remove('open');
+                document.getElementById('font-weight-dropdown').classList.remove('open');
+                document.getElementById('font-size-dropdown').classList.remove('open');
+                const rect = alignBtn.getBoundingClientRect();
+                dropdown.style.top = `${rect.bottom + 4}px`;
+                dropdown.style.left = `${rect.left}px`;
+                dropdown.classList.toggle('open');
+            });
+        }
+
+        const VERTICAL_FLEX = { top: 'flex-start', middle: 'center', bottom: 'flex-end' };
+
+        function selectAlignment(align) {
+            const isVertical = VERTICAL_ALIGNS.includes(align);
+
+            if (isVertical) {
+                animationSettings.verticalAlign = align;
+                const inner = document.getElementById('preview-inner');
+                if (inner) inner.style.alignItems = VERTICAL_FLEX[align];
+            } else {
+                animationSettings.textAlign = align;
+                const previewText = document.getElementById('preview-text');
+                if (previewText) previewText.style.textAlign = align;
+            }
+
+            const alignBtn = document.getElementById('font-align-btn');
+            if (alignBtn) alignBtn.innerHTML = ALIGN_ICONS[align];
+
+            const dropdown = document.getElementById('font-align-dropdown');
+            if (dropdown) {
+                dropdown.querySelectorAll('.weight-option').forEach(opt => {
+                    const v = opt.dataset.align;
+                    const active = v === animationSettings.textAlign || v === animationSettings.verticalAlign;
+                    opt.classList.toggle('active', active);
+                });
+            }
+
+            updateAnimation();
+        }
+
+        const CASE_OPTIONS = [
+            { value: 'none',      label: 'As typed',     display: 'Ag' },
+            { value: 'sentence',  label: 'Sentence case', display: 'Aa' },
+            { value: 'titlecase', label: 'Title Case',    display: 'AB' },
+            { value: 'uppercase', label: 'UPPERCASE',     display: 'AA' },
+            { value: 'lowercase', label: 'lowercase',     display: 'aa' },
+        ];
+
+        function getProcessedText() {
+            const text = selectedText.trim();
+            switch (animationSettings.textCase) {
+                case 'uppercase': return text.toUpperCase();
+                case 'lowercase': return text.toLowerCase();
+                case 'sentence':  return text.length ? text[0].toUpperCase() + text.slice(1).toLowerCase() : text;
+                case 'titlecase': return text.replace(/\b\w/g, c => c.toUpperCase()).replace(/\B\w/g, c => c.toLowerCase());
+                default:          return text;
+            }
+        }
+
+        function setupCasePicker() {
+            const caseBtn = document.getElementById('font-case-btn');
+            if (!caseBtn) return;
+
+            const dropdown = document.createElement('div');
+            dropdown.id = 'font-case-dropdown';
+            dropdown.className = 'font-weight-dropdown';
+
+            CASE_OPTIONS.forEach(({ value, label, display }) => {
+                const option = document.createElement('div');
+                option.className = 'weight-option' + (value === 'none' ? ' active' : '');
+                option.dataset.case = value;
+                option.style.display = 'flex';
+                option.style.alignItems = 'center';
+                option.style.gap = '8px';
+                option.innerHTML = `<span style="font-size:11px;font-weight:500;min-width:18px;text-align:center;">${display}</span><span>${label}</span>`;
+                option.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectCase(value);
+                    dropdown.classList.remove('open');
+                });
+                dropdown.appendChild(option);
+            });
+
+            document.body.appendChild(dropdown);
+
+            caseBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                ['font-picker-dropdown','font-weight-dropdown','font-size-dropdown','font-align-dropdown'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.remove('open');
+                });
+                const rect = caseBtn.getBoundingClientRect();
+                dropdown.style.top = `${rect.bottom + 4}px`;
+                dropdown.style.left = `${rect.left}px`;
+                dropdown.classList.toggle('open');
+            });
+        }
+
+        function selectCase(value) {
+            animationSettings.textCase = value;
+
+            const opt = CASE_OPTIONS.find(o => o.value === value);
+            const caseBtn = document.getElementById('font-case-btn');
+            if (caseBtn && opt) caseBtn.textContent = opt.display;
+
+            const dropdown = document.getElementById('font-case-dropdown');
+            if (dropdown) {
+                dropdown.querySelectorAll('.weight-option').forEach(o => {
+                    o.classList.toggle('active', o.dataset.case === value);
+                });
+            }
+
+            updateAnimation();
+        }
+
+        // ── Text Style Picker ────────────────────────────────────────────────
+
+        function figmaStyleToWeight(styleName) {
+            const map = {
+                'Thin': 100, 'Extra Light': 200, 'ExtraLight': 200,
+                'Light': 300, 'Regular': 400, 'Medium': 500,
+                'Semi Bold': 600, 'SemiBold': 600, 'Bold': 700,
+                'Extra Bold': 800, 'ExtraBold': 800, 'Black': 900
+            };
+            return map[styleName] || 400;
+        }
+
+        function setupStylesPicker() {
+            const stylesBtn = document.getElementById('text-style-btn');
+            if (!stylesBtn) return;
+
+            const dropdown = document.createElement('div');
+            dropdown.id = 'text-style-dropdown';
+            dropdown.className = 'text-style-dropdown';
+
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.className = 'font-search-input';
+            searchInput.placeholder = 'Search styles...';
+            dropdown.appendChild(searchInput);
+
+            const list = document.createElement('div');
+            list.id = 'text-style-list';
+            list.className = 'text-style-list';
+            dropdown.appendChild(list);
+
+            document.body.appendChild(dropdown);
+
+            stylesBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Close other dropdowns
+                ['font-picker-dropdown','font-weight-dropdown','font-size-dropdown','font-align-dropdown','font-case-dropdown'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.remove('open');
+                });
+
+                const rect = stylesBtn.getBoundingClientRect();
+                const isOpening = !dropdown.classList.contains('open');
+                dropdown.classList.toggle('open');
+
+                if (isOpening) {
+                    // Position below the button, right-aligned to its right edge
+                    dropdown.style.top = `${rect.bottom + 4}px`;
+                    dropdown.style.right = `${window.innerWidth - rect.right}px`;
+                    dropdown.style.left = 'auto';
+                    dropdown.style.bottom = 'auto';
+                    searchInput.value = '';
+                    renderStylesList('');
+                    searchInput.focus();
+                }
+            });
+
+            searchInput.addEventListener('input', (e) => {
+                e.stopPropagation();
+                renderStylesList(e.target.value.toLowerCase());
+            });
+            searchInput.addEventListener('click', e => e.stopPropagation());
+            searchInput.addEventListener('keydown', e => e.stopPropagation());
+
+            const detachBtn = document.getElementById('style-detach-btn');
+            if (detachBtn) {
+                detachBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    clearTextStyle();
+                });
+            }
+        }
+
+        function renderStylesList(query) {
+            const list = document.getElementById('text-style-list');
+            if (!list) return;
+            list.innerHTML = '';
+
+            const filtered = query
+                ? localTextStyles.filter(s => s.name.toLowerCase().includes(query))
+                : localTextStyles;
+
+            if (localTextStyles.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'style-empty-state';
+                empty.textContent = 'No text styles found in this document.';
+                list.appendChild(empty);
+                return;
+            }
+
+            if (filtered.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'style-empty-state';
+                empty.textContent = 'No styles match your search.';
+                list.appendChild(empty);
+                return;
+            }
+
+            // Group styles by slash prefix
+            const groups = {};
+            const ungrouped = [];
+
+            filtered.forEach(style => {
+                const slashIdx = style.name.indexOf('/');
+                if (slashIdx !== -1) {
+                    const group = style.name.substring(0, slashIdx);
+                    if (!groups[group]) groups[group] = [];
+                    groups[group].push({ style, displayName: style.name.substring(slashIdx + 1) });
+                } else {
+                    ungrouped.push({ style, displayName: style.name });
+                }
+            });
+
+            // Render ungrouped first (top-level styles)
+            ungrouped.forEach(({ style, displayName }) => {
+                list.appendChild(createStyleOptionEl(style, displayName));
+            });
+
+            // Render grouped styles
+            Object.entries(groups).forEach(([groupName, items]) => {
+                const header = document.createElement('div');
+                header.className = 'style-group-header';
+                header.textContent = groupName;
+                list.appendChild(header);
+                items.forEach(({ style, displayName }) => {
+                    list.appendChild(createStyleOptionEl(style, displayName));
+                });
+            });
+        }
+
+        function createStyleOptionEl(style, displayName) {
+            const option = document.createElement('div');
+            option.className = 'style-option' + (style.id === selectedTextStyleId ? ' active' : '');
+            option.dataset.id = style.id;
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'style-option-name';
+            nameSpan.textContent = displayName;
+
+            const metaSpan = document.createElement('span');
+            metaSpan.className = 'style-option-meta';
+            metaSpan.textContent = `${style.fontName.family} · ${style.fontSize}`;
+
+            option.appendChild(nameSpan);
+            option.appendChild(metaSpan);
+
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectTextStyle(style);
+                document.getElementById('text-style-dropdown').classList.remove('open');
+            });
+
+            return option;
+        }
+
+        function selectTextStyle(style) {
+            selectedTextStyleId = style.id;
+            animationSettings.textStyleId = style.id;
+
+            const weight = figmaStyleToWeight(style.fontName.style);
+            animationSettings.font = {
+                family: style.fontName.family,
+                style: style.fontName.style,
+                weight
+            };
+            animationSettings.fontSize = style.fontSize;
+
+            // Update individual font control buttons to reflect the style
+            const fontBtn = document.getElementById('font-picker-btn');
+            if (fontBtn) fontBtn.textContent = style.fontName.family;
+
+            const weightBtn = document.getElementById('font-weight-btn');
+            if (weightBtn) weightBtn.textContent = style.fontName.style;
+
+            const sizeBtn = document.getElementById('font-size-btn');
+            if (sizeBtn) sizeBtn.textContent = style.fontSize;
+
+            // Color is NOT part of a Figma text style — keep the user's current color as-is
+
+            // Load font and update preview
+            loadGoogleFont(style.fontName.family, weight);
+            applyFontToPreview(style.fontName.family, weight);
+
+            const previewText = document.getElementById('preview-text');
+            if (previewText) previewText.style.fontSize = `${style.fontSize}px`;
+
+            // Show detach button and lock the other font controls
+            const detachBtn = document.getElementById('style-detach-btn');
+            if (detachBtn) detachBtn.style.display = 'flex';
+            const fontControls = document.getElementById('font-controls');
+            if (fontControls) fontControls.classList.add('font-controls-locked');
+
+            // Swap the icon for a truncated name chip
+            const stylesBtn = document.getElementById('text-style-btn');
+            if (stylesBtn) {
+                const truncated = style.name.length > 14
+                    ? style.name.substring(0, 14) + '…'
+                    : style.name;
+                const svgEl = stylesBtn.querySelector('svg');
+                if (svgEl) svgEl.style.display = 'none';
+                let chip = stylesBtn.querySelector('.style-active-chip');
+                if (!chip) {
+                    chip = document.createElement('span');
+                    chip.className = 'style-active-chip';
+                    stylesBtn.appendChild(chip);
+                }
+                chip.textContent = truncated;
+                chip.style.display = 'inline-block';
+            }
+
+            updateAnimation();
+        }
+
+        function clearTextStyle() {
+            if (!selectedTextStyleId) return;
+            selectedTextStyleId = null;
+            animationSettings.textStyleId = undefined;
+
+            const stylesBtn = document.getElementById('text-style-btn');
+            if (stylesBtn) {
+                // Restore the icon
+                const svgEl = stylesBtn.querySelector('svg');
+                if (svgEl) svgEl.style.display = '';
+                const chip = stylesBtn.querySelector('.style-active-chip');
+                if (chip) chip.style.display = 'none';
+            }
+
+            const detachBtn = document.getElementById('style-detach-btn');
+            if (detachBtn) detachBtn.style.display = 'none';
+            const fontControls = document.getElementById('font-controls');
+            if (fontControls) fontControls.classList.remove('font-controls-locked');
+        }
+
         function updateAnimation() {
             const elements = getDOMElements();
-            
+
             // Get current settings from UI elements
             if (elements.styleSelect) {
                 animationSettings.style = elements.styleSelect.value;
@@ -2673,7 +3981,7 @@
             if (typeByRadio) {
                 animationSettings.typeBy = typeByRadio.value;
             }
-            
+
             const directionRadio = document.querySelector('input[name="direction"]:checked');
             if (directionRadio) {
                 animationSettings.direction = directionRadio.value;
@@ -2701,7 +4009,17 @@
                 elements.previewText.className = 'preview-text';
                 elements.previewText.innerHTML = '';
                 elements.previewText.style.color = animationSettings.color;
-                
+                if (animationSettings.font) {
+                    elements.previewText.style.fontFamily = `'${animationSettings.font.family}', sans-serif`;
+                    elements.previewText.style.fontWeight = animationSettings.font.weight || 400;
+                }
+                if (animationSettings.fontSize) {
+                    elements.previewText.style.fontSize = `${animationSettings.fontSize}px`;
+                }
+                if (animationSettings.textAlign) {
+                    elements.previewText.style.textAlign = animationSettings.textAlign;
+                }
+
                 // Stop any existing timeouts for typing animation
                 if (window.currentTypingTimeout) {
                     clearTimeout(window.currentTypingTimeout);
@@ -2716,7 +4034,7 @@
 
         function applyAnimation() {
             const elements = getDOMElements();
-            const text = selectedText.trim();
+            const text = getProcessedText();
             const { style, typeBy, direction, duration } = animationSettings;
             
             if (!elements.previewText) return;
@@ -2749,26 +4067,52 @@
             elements.previewText.style.transform = '';
             elements.previewText.style.opacity = '';
             elements.previewText.style.animation = '';
-            
+
+            // Re-apply font settings after reset so all child elements inherit them
+            if (animationSettings.font) {
+                elements.previewText.style.fontFamily = `'${animationSettings.font.family}', sans-serif`;
+                elements.previewText.style.fontWeight = animationSettings.font.weight || 400;
+            }
+            if (animationSettings.fontSize) {
+                elements.previewText.style.fontSize = `${animationSettings.fontSize}px`;
+            }
+            if (animationSettings.textAlign) {
+                elements.previewText.style.textAlign = animationSettings.textAlign;
+            }
+            const previewInner = document.getElementById('preview-inner');
+            if (previewInner && animationSettings.verticalAlign) {
+                previewInner.style.alignItems = VERTICAL_FLEX[animationSettings.verticalAlign] || 'center';
+            }
+
             // Set animation duration
             elements.previewText.style.animationDuration = `${duration}ms`;
             
             if (style === 'typing') {
-                // Special handling for typing animation
                 animateTyping(text, typeBy, direction, duration);
             } else if (style === 'scale') {
-                // Special handling for scale animations
-                // Map direction to scale type: forward = grow, backwards = shrink
                 const scaleType = direction === 'forward' ? 'scale-grow' : 'scale-shrink';
                 animateScale(text, typeBy, direction, duration, scaleType);
             } else if (style === 'rotate') {
-                // Special handling for rotate animations
                 animateRotate(text, typeBy, direction, duration, style);
+            } else if (style === 'fade') {
+                // forward = fade-in, backwards = fade-out
+                const fadeClass = direction === 'forward' ? 'fade-in' : 'fade-out';
+                if (typeBy === 'letter') {
+                    animateByLetter(text, fadeClass, direction, duration);
+                } else {
+                    animateByWord(text, fadeClass, direction, duration);
+                }
+            } else if (style === 'slide') {
+                // forward = slide-up (in), backwards = slide-out
+                const slideClass = direction === 'forward' ? 'slide-up' : 'slide-out';
+                if (typeBy === 'letter') {
+                    animateByLetter(text, slideClass, direction, duration);
+                } else {
+                    animateByWord(text, slideClass, direction, duration);
+                }
             } else if (typeBy === 'letter') {
-                // Animate by letter with stagger
                 animateByLetter(text, style, direction, duration);
             } else {
-                // Animate the whole text - back to original logic
                 elements.previewText.textContent = text;
                 elements.previewText.classList.add(`animate-${style}`);
             }
@@ -2894,6 +4238,38 @@
                     });
                 }, delay);
                 
+                elements.previewText.appendChild(span);
+            });
+        }
+
+        function animateByWord(text, animClass, direction, duration) {
+            const elements = getDOMElements();
+            if (!elements.previewText) return;
+
+            elements.previewText.innerHTML = '';
+            const words = text.split(' ');
+            const staggerDelay = duration / (words.length * 2);
+
+            words.forEach((word, index) => {
+                if (index > 0) {
+                    elements.previewText.appendChild(document.createTextNode(' '));
+                }
+                const span = document.createElement('span');
+                span.className = 'letter';
+                span.textContent = word;
+
+                const delay = direction === 'forward'
+                    ? index * staggerDelay
+                    : (words.length - 1 - index) * staggerDelay;
+                span.style.animationDelay = `${delay}ms`;
+                span.style.animationDuration = `${duration}ms`;
+
+                setTimeout(() => {
+                    requestAnimationFrame(() => {
+                        span.classList.add(`animate-${animClass}`);
+                    });
+                }, delay);
+
                 elements.previewText.appendChild(span);
             });
         }
@@ -3123,12 +4499,54 @@
             // Note: Cleanup is now handled in applyAnimation() - no need to clear here
 
             if (typeBy === 'letter') {
-                // Rotate by sentence - whole text rotates at once
-                animateRotateBySentence(text, duration, style, direction);
+                animateRotateByLetter(text, direction, duration);
             } else {
-                // Rotate by word - each word rotates as a unit
                 animateRotateByWord(text, direction, duration, style);
             }
+        }
+
+        function animateRotateByLetter(text, direction, duration) {
+            const elements = getDOMElements();
+            if (!elements.previewText) return;
+
+            if (!window.rotateAnimationTimeouts) {
+                window.rotateAnimationTimeouts = [];
+            }
+
+            elements.previewText.innerHTML = '';
+            const letters = text.split('');
+            const staggerDelay = Math.max(50, duration / (letters.length * 2));
+            const rotateClass = direction === 'backwards' ? 'animate-rotate-backwards' : 'animate-rotate';
+            const totalTime = (letters.length - 1) * staggerDelay + duration;
+
+            letters.forEach((letter, index) => {
+                const span = document.createElement('span');
+                span.className = 'letter';
+                span.textContent = letter === ' ' ? '\u00A0' : letter;
+                span.style.display = 'inline-block';
+                span.style.transformOrigin = 'center';
+                span.style.animationDuration = `${duration}ms`;
+                span.style.animationDelay = `${index * staggerDelay}ms`;
+                elements.previewText.appendChild(span);
+
+                const t = setTimeout(() => {
+                    if (!animationState.isPlaying) return;
+                    requestAnimationFrame(() => span.classList.add(rotateClass));
+                }, index * staggerDelay);
+                window.rotateAnimationTimeouts.push(t);
+            });
+
+            // Loop
+            const loopTimeout = setTimeout(() => {
+                if (!animationState.isPlaying) return;
+                elements.previewText.innerHTML = '';
+                const restartTimeout = setTimeout(() => {
+                    if (!animationState.isPlaying) return;
+                    animateRotateByLetter(text, direction, duration);
+                }, 200);
+                window.rotateAnimationTimeouts.push(restartTimeout);
+            }, totalTime + 200);
+            window.rotateAnimationTimeouts.push(loopTimeout);
         }
 
         function animateRotateBySentence(text, duration, style, direction) {
@@ -3415,8 +4833,7 @@
         function updateTypeByLabel(style) {
             const typeByLabel = document.getElementById('type-by-label');
             if (!typeByLabel) return;
-            
-            // Map animation styles to their corresponding action words
+
             const styleLabels = {
                 'typing': 'Type by',
                 'fade': 'Fade by',
@@ -3424,23 +4841,21 @@
                 'scale': 'Scale by',
                 'rotate': 'Rotate by'
             };
-            
-            // Special handling for scale and rotate animations - change options to Sentence/Word
-            const typeByRadioContainer = document.querySelector('input[name="type-by"]').closest('.radio-group');
-            if ((style === 'scale' || style === 'rotate') && typeByRadioContainer) {
+
+            // For scale, change radio option text to Sentence/Word
+            const typeByRadioContainer = document.getElementById('typeby-radios');
+            if (style === 'scale' && typeByRadioContainer) {
                 const letterLabel = typeByRadioContainer.querySelector('label:first-child .radio-text');
                 const wordLabel = typeByRadioContainer.querySelector('label:last-child .radio-text');
                 if (letterLabel) letterLabel.textContent = 'Sentence';
                 if (wordLabel) wordLabel.textContent = 'Word';
             } else if (typeByRadioContainer) {
-                // Reset to default for other animations
                 const letterLabel = typeByRadioContainer.querySelector('label:first-child .radio-text');
                 const wordLabel = typeByRadioContainer.querySelector('label:last-child .radio-text');
                 if (letterLabel) letterLabel.textContent = 'Letter';
                 if (wordLabel) wordLabel.textContent = 'Word';
             }
-            
-            // Update the label text
+
             typeByLabel.textContent = styleLabels[style] || 'Type by';
         }
 
@@ -3448,48 +4863,72 @@
             const styleSelect = document.getElementById('style-select');
             const directionControl = document.getElementById('direction-control');
             const directionLabel = document.getElementById('direction-label');
-            
-            if (styleSelect && directionControl && directionLabel) {
-                const selectedStyle = styleSelect.value;
-                const isScaleAnimation = selectedStyle === 'scale';
-                
-                if (isScaleAnimation) {
-                    // For scale animations, change to "Type" and show Grow/Shrink options
-                    directionLabel.textContent = 'Type';
-                    directionControl.style.display = 'block';
-                    
-                    // Update radio options to show Grow/Shrink
-                    const radioTexts = directionControl.querySelectorAll('.radio-text');
-                    const forwardRadio = directionControl.querySelector('input[value="forward"]');
-                    const backwardRadio = directionControl.querySelector('input[value="backwards"]');
-                    
-                    if (radioTexts.length >= 2) {
-                        radioTexts[0].textContent = 'Grow';
-                        radioTexts[1].textContent = 'Shrink';
-                    }
-                    
-                    // Set default to Grow (forward)
-                    if (forwardRadio) {
-                        forwardRadio.checked = true;
-                        animationSettings.direction = 'forward';
-                    }
-                } else {
-                    // For other animations, use normal Direction with Forward/Backward
-                    directionLabel.textContent = 'Direction';
-                    directionControl.style.display = 'block';
-                    
-                    // Restore radio options to show Forward/Backward
-                    const radioTexts = directionControl.querySelectorAll('.radio-text');
-                    if (radioTexts.length >= 2) {
-                        radioTexts[0].textContent = 'Forward';
-                        radioTexts[1].textContent = 'Backward';
-                    }
+            const typebyRadios = document.getElementById('typeby-radios');
+            const rotateDirRadios = document.getElementById('rotate-dir-radios');
+
+            if (!styleSelect || !directionControl || !directionLabel) return;
+
+            const selectedStyle = styleSelect.value;
+            const radioTexts = directionControl.querySelectorAll('.radio-text');
+            const forwardRadio = directionControl.querySelector('input[value="forward"]');
+
+            if (selectedStyle === 'rotate') {
+                // Row 1: show letter/word radios (same as other styles)
+                if (typebyRadios) typebyRadios.style.display = 'flex';
+                if (rotateDirRadios) rotateDirRadios.style.display = 'none';
+                // Row 2: show Direction with Forward/Backward
+                directionLabel.textContent = 'Direction';
+                directionControl.style.display = 'block';
+                if (radioTexts.length >= 2) {
+                    radioTexts[0].textContent = 'Forward';
+                    radioTexts[1].textContent = 'Backward';
                 }
-                
-                // Resize plugin window to accommodate the changed content height
-                resizePluginToContent();
+
+            } else if (selectedStyle === 'scale') {
+                // Row 1: show letter/word radios (labelled Sentence/Word via updateTypeByLabel)
+                if (typebyRadios) typebyRadios.style.display = 'flex';
+                if (rotateDirRadios) rotateDirRadios.style.display = 'none';
+                // Row 2: show Type with Grow/Shrink
+                directionLabel.textContent = 'Type';
+                directionControl.style.display = 'block';
+                if (radioTexts.length >= 2) {
+                    radioTexts[0].textContent = 'Grow';
+                    radioTexts[1].textContent = 'Shrink';
+                }
+                if (forwardRadio) {
+                    forwardRadio.checked = true;
+                    animationSettings.direction = 'forward';
+                }
+
+            } else if (selectedStyle === 'fade' || selectedStyle === 'slide') {
+                // Row 1: show letter/word radios
+                if (typebyRadios) typebyRadios.style.display = 'flex';
+                if (rotateDirRadios) rotateDirRadios.style.display = 'none';
+                // Row 2: show Type with In/Out
+                directionLabel.textContent = 'Type';
+                directionControl.style.display = 'block';
+                if (radioTexts.length >= 2) {
+                    radioTexts[0].textContent = 'In';
+                    radioTexts[1].textContent = 'Out';
+                }
+                if (forwardRadio) {
+                    forwardRadio.checked = true;
+                    animationSettings.direction = 'forward';
+                }
+
+            } else {
+                // typing: Row 1 = letter/word, Row 2 = Direction Forward/Backward
+                if (typebyRadios) typebyRadios.style.display = 'flex';
+                if (rotateDirRadios) rotateDirRadios.style.display = 'none';
+                directionLabel.textContent = 'Direction';
+                directionControl.style.display = 'block';
+                if (radioTexts.length >= 2) {
+                    radioTexts[0].textContent = 'Forward';
+                    radioTexts[1].textContent = 'Backward';
+                }
             }
-            
+
+            resizePluginToContent();
             updateAnimation();
         }
         
@@ -3501,11 +4940,10 @@
             // Tooltip is not needed since padlock emoji is clear visual indicator
             // and disabled options can't be selected anyway
             
-            // Only show tooltip if somehow a disabled option gets selected (shouldn't happen)
+            // No disabled styles remain - tooltip listener retained for future use
             elements.styleSelect.addEventListener('change', () => {
-                const disabledStyles = ['fade', 'slide'];
+                const disabledStyles = [];
                 if (disabledStyles.includes(elements.styleSelect.value)) {
-                    // Briefly show tooltip to explain why selection was reverted
                     elements.selectTooltip.classList.add('show');
                     setTimeout(() => {
                         elements.selectTooltip.classList.remove('show');
