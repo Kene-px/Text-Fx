@@ -40,6 +40,13 @@ interface SelectionData {
   type: string;
   name: string;
   content?: string;
+  // Font details of the selected layer, so the UI can tell the user when the
+  // plugin cannot reproduce it. fontFamily/fontStyle are absent for a layer
+  // that mixes several fonts.
+  fontFamily?: string;
+  fontStyle?: string;
+  mixedFonts?: boolean;
+  missingFont?: boolean;
 }
 
 // Define a type for plugin messages
@@ -131,10 +138,17 @@ function sendSelectionToUI() {
 
   if (selection.length === 1 && selection[0].type === 'TEXT') {
     const textNode = selection[0] as TextNode;
+    // fontName is figma.mixed when a single layer uses more than one font
+    const fontName = textNode.fontName;
+    const mixedFonts = fontName === figma.mixed;
     const selectionData: SelectionData = {
       type: 'TEXT',
       name: textNode.name,
-      content: textNode.characters // This gets the actual text content
+      content: textNode.characters, // This gets the actual text content
+      mixedFonts,
+      missingFont: textNode.hasMissingFont,
+      fontFamily: mixedFonts ? undefined : (fontName as FontName).family,
+      fontStyle: mixedFonts ? undefined : (fontName as FontName).style
     };
     
     console.log('Sending text layer to UI:', selectionData);
