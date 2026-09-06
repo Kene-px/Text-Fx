@@ -633,6 +633,11 @@
             font-weight: 500;
         }
 
+        /* Layer name in the error red when its font can't be animated */
+        .input-label.selected.unsupported {
+            color: #EF4444 !important;
+        }
+
         .character-counter {
             font-size: 10px;
             color: #9CA3AF;
@@ -3203,10 +3208,16 @@
 
         // Shown and hidden the same way as the character-limit warning it sits
         // under, so the two read as one kind of message.
+        // Whether the current selection's font blocks animating. Held as state
+        // because both updateCharacterCounter and handleSelectionChange decide
+        // the animate button's enabled state and neither may override this veto.
+        let selectedFontUnsupported = false;
+
         function updateFontWarning(selection) {
+            selectedFontUnsupported = isFontUnsupported(selection);
             const warning = document.getElementById('font-warning');
             if (!warning) return;
-            warning.style.display = isFontUnsupported(selection) ? 'block' : 'none';
+            warning.style.display = selectedFontUnsupported ? 'block' : 'none';
         }
 
         function handleSelectionChange(selection) {
@@ -3216,7 +3227,11 @@
                 // Text layer selected
                 selectedLayerName = selection.name;
                 selectedText = selection.content || '';
-                
+
+                // Resolve font support first: the character counter and the
+                // animate button below both depend on it
+                updateFontWarning(selection);
+
                 // Check character limit for selected layer
                 updateCharacterCounter(selectedText);
                 
@@ -3239,6 +3254,7 @@
                     const truncatedTitle = truncateLayerTitle(selectedLayerName);
                     elements.inputLabel.innerHTML = `"${truncatedTitle}" <span style="color: #fcfcfc;">selected</span>`;
                     elements.inputLabel.classList.add('selected');
+                    elements.inputLabel.classList.toggle('unsupported', selectedFontUnsupported);
                 }
                 
                 // Hide selected layer display - we don't need it
@@ -3249,11 +3265,8 @@
                 // Enable animate button only if within character limit
                 const cleanText = selectedText.replace(/\n|\r\n|\r/g, '');
                 if (elements.animateBtn) {
-                    elements.animateBtn.disabled = cleanText.length > 100;
+                    elements.animateBtn.disabled = cleanText.length > 100 || selectedFontUnsupported;
                 }
-
-                // Tell the user when this layer's font can't be reproduced
-                updateFontWarning(selection);
 
             } else {
                 // No text layer selected - reset to input mode
@@ -3278,7 +3291,7 @@
                 // Reset input label
                 if (elements.inputLabel) {
                     elements.inputLabel.textContent = 'Select a text layer';
-                    elements.inputLabel.classList.remove('selected');
+                    elements.inputLabel.classList.remove('selected', 'unsupported');
                 }
                 
                 // Hide selected layer display
@@ -3337,10 +3350,10 @@
             } else if (charCount >= 80) {
                 counter.classList.add('warning');
                 warning.style.display = 'none';
-                if (animateBtn) animateBtn.disabled = false;
+                if (animateBtn) animateBtn.disabled = selectedFontUnsupported;
             } else {
                 warning.style.display = 'none';
-                if (animateBtn && selectedText.trim()) animateBtn.disabled = false;
+                if (animateBtn && selectedText.trim()) animateBtn.disabled = selectedFontUnsupported;
             }
         }
 
@@ -3426,6 +3439,7 @@
 
         function goToPreview() {
             if (!selectedText.trim()) return;
+            if (selectedFontUnsupported) return;
             
             const elements = getDOMElements();
             if (!elements.chooseSection || !elements.previewSection) return;
