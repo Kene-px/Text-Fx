@@ -246,13 +246,16 @@
             top: 0;
             left: 0;
             right: 0;
-            bottom: 0;
-            overflow-x: hidden;
-            overflow-y: auto;
+            /* Clears the font-controls bar so the horizontal scrollbar below
+               stays visible rather than sitting behind it */
+            bottom: 36px;
+            overflow-x: auto;
+            overflow-y: hidden;
         }
 
         .preview-scroll::-webkit-scrollbar {
             width: 4px;
+            height: 4px;
         }
 
         .preview-scroll::-webkit-scrollbar-track {
@@ -270,10 +273,14 @@
 
         .preview-inner {
             min-height: 100%;
+            /* Widens to the full unwrapped line, so the container scrolls to
+               it; stays at 100% for text that already fits */
+            min-width: max-content;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px 20px 40px;
+            /* Even padding now that .preview-scroll clears the controls bar */
+            padding: 20px;
         }
 
         .font-controls {
@@ -481,8 +488,9 @@
         .preview-text {
             color: #fcfcfc;
             text-align: center;
-            max-width: 100%;
-            word-wrap: break-word;
+            /* Long text runs off to the side and is reached by scrolling
+               across, rather than wrapping onto further lines */
+            white-space: nowrap;
             line-height: 1.2;
         }
         
