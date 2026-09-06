@@ -40,6 +40,21 @@ interface SelectionData {
   type: string;
   name: string;
   content?: string;
+  // Font details of the selected layer, so the UI can tell the user when the
+  // plugin cannot reproduce it. fontFamily/fontStyle are absent for a layer
+  // that mixes several fonts.
+  fontFamily?: string;
+  fontStyle?: string;
+  mixedFonts?: boolean;
+  missingFont?: boolean;
+  // Typography the preview adopts by default, already normalised to the UI's
+  // vocabulary. Any field is absent when the layer's value is mixed or has no
+  // equivalent the preview can render.
+  fontSize?: number;
+  textAlign?: 'left' | 'center' | 'right';
+  verticalAlign?: 'top' | 'middle' | 'bottom';
+  textCase?: 'none' | 'uppercase' | 'lowercase' | 'titlecase';
+  color?: string;
 }
 
 // Define a type for plugin messages
@@ -54,6 +69,66 @@ function weightToFigmaStyle(weight: number): string {
     500: 'Medium', 600: 'Semi Bold', 700: 'Bold', 800: 'Extra Bold', 900: 'Black'
   };
   return map[weight] || 'Regular';
+}
+
+// Load the closest font Figma can actually provide and return the FontName that
+// succeeded. Figma's catalogue does not match Google's family-for-family, and
+// plenty of families carry no weight matching weightToFigmaStyle(), so the
+// requested style must never be assigned without checking what really loaded.
+async function loadFontWithFallback(family: string, weight: number): Promise<FontName> {
+  const candidates: FontName[] = [
+    { family, style: weightToFigmaStyle(weight) },
+    { family, style: 'Regular' },
+    { family: 'Inter', style: 'Regular' }
+  ];
+  for (const candidate of candidates) {
+    try {
+      await figma.loadFontAsync(candidate);
+      return candidate;
+    } catch (_e) {
+      // Unavailable in this document; fall through to the next candidate
+    }
+  }
+  throw new Error(`Could not load font "${family}" or any fallback`);
+}
+
+// ── Reading typography off a canvas layer ────────────────────────────────
+// Character-level properties come back as figma.mixed when a layer is not
+// uniform; there is nothing sensible to inherit in that case.
+function uniform<T>(value: T | PluginAPI['mixed']): T | undefined {
+  return value === figma.mixed ? undefined : (value as T);
+}
+
+const H_ALIGN_TO_UI: { [key: string]: 'left' | 'center' | 'right' } = {
+  LEFT: 'left', CENTER: 'center', RIGHT: 'right', JUSTIFIED: 'left'
+};
+
+const V_ALIGN_TO_UI: { [key: string]: 'top' | 'middle' | 'bottom' } = {
+  TOP: 'top', CENTER: 'middle', BOTTOM: 'bottom'
+};
+
+// SMALL_CAPS has no preview equivalent, so it is deliberately absent here and
+// simply not inherited.
+const TEXT_CASE_TO_UI: { [key: string]: 'none' | 'uppercase' | 'lowercase' | 'titlecase' } = {
+  ORIGINAL: 'none', UPPER: 'uppercase', LOWER: 'lowercase', TITLE: 'titlecase'
+};
+
+function rgbToHex(color: RGB): string {
+  const channel = (c: number) => {
+    const hex = Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  return '#' + channel(color.r) + channel(color.g) + channel(color.b);
+}
+
+// The first visible solid fill — the only kind the preview can represent.
+function firstSolidFillHex(node: TextNode): string | undefined {
+  const fills = uniform(node.fills);
+  if (!fills) return undefined;
+  for (const paint of fills) {
+    if (paint.type === 'SOLID' && paint.visible !== false) return rgbToHex(paint.color);
+  }
+  return undefined;
 }
 
 async function sendTextStylesToUI() {
@@ -110,10 +185,22 @@ function sendSelectionToUI() {
 
   if (selection.length === 1 && selection[0].type === 'TEXT') {
     const textNode = selection[0] as TextNode;
+    // fontName is figma.mixed when a single layer uses more than one font
+    const fontName = textNode.fontName;
+    const mixedFonts = fontName === figma.mixed;
     const selectionData: SelectionData = {
       type: 'TEXT',
       name: textNode.name,
-      content: textNode.characters // This gets the actual text content
+      content: textNode.characters, // This gets the actual text content
+      mixedFonts,
+      missingFont: textNode.hasMissingFont,
+      fontFamily: mixedFonts ? undefined : (fontName as FontName).family,
+      fontStyle: mixedFonts ? undefined : (fontName as FontName).style,
+      fontSize: uniform(textNode.fontSize),
+      textAlign: H_ALIGN_TO_UI[textNode.textAlignHorizontal],
+      verticalAlign: V_ALIGN_TO_UI[textNode.textAlignVertical],
+      textCase: TEXT_CASE_TO_UI[uniform(textNode.textCase) as string],
+      color: firstSolidFillHex(textNode)
     };
     
     console.log('Sending text layer to UI:', selectionData);
@@ -294,14 +381,7 @@ async function createTextNodeForFrame(
   // Load selected font, fall back to Inter
   const fontFamily = animation.font?.family || 'Inter';
   const fontWeight = animation.font?.weight || 400;
-  const figmaStyle = weightToFigmaStyle(fontWeight);
-  try {
-    await figma.loadFontAsync({ family: fontFamily, style: figmaStyle });
-  } catch {
-    try { await figma.loadFontAsync({ family: fontFamily, style: 'Regular' }); }
-    catch { await figma.loadFontAsync({ family: 'Inter', style: 'Regular' }); }
-  }
-  textNode.fontName = { family: fontFamily, style: figmaStyle };
+  textNode.fontName = await loadFontWithFallback(fontFamily, fontWeight);
 
   // Apply Figma text style if one was selected; this sets fontName, fontSize, textCase, spacing
   if (animation.textStyleId) {
@@ -1174,14 +1254,7 @@ async function createSlidesAnimation(data: ComponentData) {
       const textNode = figma.createText();
       const sFontFamily = animation.font?.family || 'Inter';
       const sFontWeight = animation.font?.weight || 400;
-      const sFigmaStyle = weightToFigmaStyle(sFontWeight);
-      try {
-        await figma.loadFontAsync({ family: sFontFamily, style: sFigmaStyle });
-      } catch {
-        try { await figma.loadFontAsync({ family: sFontFamily, style: 'Regular' }); }
-        catch { await figma.loadFontAsync({ family: 'Inter', style: 'Regular' }); }
-      }
-      textNode.fontName = { family: sFontFamily, style: sFigmaStyle };
+      textNode.fontName = await loadFontWithFallback(sFontFamily, sFontWeight);
       const frameText = getFrameText(text, animation, i, frameCount);
       textNode.characters = frameText;
       textNode.fontSize = 24;
