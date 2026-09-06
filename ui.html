@@ -1563,6 +1563,9 @@
                 <div class="character-warning" id="character-warning" style="display: none;">
                     Text exceeds 100 character limit. Please shorten before animating.
                 </div>
+                <div class="character-warning" id="font-warning" style="display: none;">
+                    We currently support only google fonts
+                </div>
             </div>
         </div>
 
@@ -3188,36 +3191,22 @@
         // The picker only offers Google Fonts and the live preview renders them
         // through fonts.googleapis.com, so a canvas layer set in anything else
         // cannot be shown or recreated — the generated component would quietly
-        // fall back to another face. Returns a message, or null when the
-        // layer's font is fine.
-        function describeUnsupportedFont(selection) {
-            if (!selection || selection.type !== 'TEXT') return null;
-            if (selection.mixedFonts) {
-                return 'This layer uses multiple fonts \u2014 the animation will use the font chosen below';
-            }
+        // fall back to another face. True when the layer's font is one of those.
+        function isFontUnsupported(selection) {
+            if (!selection || selection.type !== 'TEXT') return false;
+            if (selection.mixedFonts) return true;
             const family = selection.fontFamily;
-            if (!family) return null;
-            if (selection.missingFont) {
-                return `\u201c${family}\u201d is missing from this document \u2014 the animation will use the font chosen below`;
-            }
-            if (!GOOGLE_FONTS.some(f => f.family === family)) {
-                return `\u201c${family}\u201d isn\u2019t available in the font picker \u2014 the animation will use the font chosen below`;
-            }
-            return null;
+            if (!family) return false;
+            if (selection.missingFont) return true;
+            return !GOOGLE_FONTS.some(f => f.family === family);
         }
 
-        // Selection events repeat for the same layer (init, re-selection, the
-        // UI's own get-selection calls), so remember what was last warned about
-        // and only speak up when it actually changes.
-        let lastFontWarningKey = null;
-
-        function warnIfFontUnsupported(selection) {
-            const message = describeUnsupportedFont(selection);
-            if (!message) { lastFontWarningKey = null; return; }
-            const key = `${selection.name}\u0000${selection.fontFamily || ''}\u0000${message}`;
-            if (key === lastFontWarningKey) return;
-            lastFontWarningKey = key;
-            showWarningMessage(message);
+        // Shown and hidden the same way as the character-limit warning it sits
+        // under, so the two read as one kind of message.
+        function updateFontWarning(selection) {
+            const warning = document.getElementById('font-warning');
+            if (!warning) return;
+            warning.style.display = isFontUnsupported(selection) ? 'block' : 'none';
         }
 
         function handleSelectionChange(selection) {
@@ -3264,12 +3253,12 @@
                 }
 
                 // Tell the user when this layer's font can't be reproduced
-                warnIfFontUnsupported(selection);
+                updateFontWarning(selection);
 
             } else {
                 // No text layer selected - reset to input mode
                 selectedLayerName = '';
-                lastFontWarningKey = null;
+                updateFontWarning(null);
                 
                 // Reset UI to input mode
                 if (elements.textInput) {
@@ -5074,39 +5063,6 @@
             console.log('TIP: Click the first variant or switch to prototype mode to see the animation!');
         }
         
-        function showWarningMessage(message) {
-            // Create warning indicator
-            const warningIndicator = document.createElement('div');
-            // textContent, not innerHTML: the message embeds a font family name
-            // read from the document, which must never be parsed as markup
-            warningIndicator.textContent = `⚠ ${message}`;
-            warningIndicator.style.cssText = `
-                position: fixed;
-                top: 10px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: #F59E0B;
-                color: white;
-                padding: 8px 16px;
-                border-radius: 4px;
-                font-size: 12px;
-                z-index: 1000;
-                animation: slideDown 0.3s ease-out;
-                max-width: calc(100% - 32px);
-                box-sizing: border-box;
-                text-align: center;
-            `;
-
-            document.body.appendChild(warningIndicator);
-
-            // Remove after 5 seconds
-            setTimeout(() => {
-                if (warningIndicator.parentNode) {
-                    warningIndicator.parentNode.removeChild(warningIndicator);
-                }
-            }, 5000);
-        }
-
         function showErrorMessage(message) {
             // Create error indicator
             const errorIndicator = document.createElement('div');
