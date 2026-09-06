@@ -3230,6 +3230,57 @@
             warning.style.display = selectedFontUnsupported ? 'block' : 'none';
         }
 
+        // Adopt the selected layer's typography so the preview starts from what
+        // is already on the canvas. Applied through the same setters the
+        // toolbar buttons use, so the controls, the preview and
+        // animationSettings all stay in step.
+        function inheritTypographyFromSelection(selection) {
+            if (!selection || selection.type !== 'TEXT') return;
+            // An unsupported family can't be shown in the picker or rendered in
+            // the preview, and that layer can't be animated anyway.
+            if (selectedFontUnsupported) return;
+
+            if (selection.fontFamily) {
+                selectFont(selection.fontFamily);
+                // selectFont resets to Regular; pick the closest weight the
+                // family actually ships to the one the layer uses.
+                const entry = GOOGLE_FONTS.find(f => f.family === selection.fontFamily);
+                const available = entry ? entry.weights : [400];
+                const wanted = figmaStyleToWeight(selection.fontStyle);
+                const weight = available.indexOf(wanted) !== -1
+                    ? wanted
+                    : available.reduce((best, w) =>
+                        Math.abs(w - wanted) < Math.abs(best - wanted) ? w : best, available[0]);
+                selectWeight(weight);
+            }
+            if (typeof selection.fontSize === 'number') {
+                selectFontSize(Math.round(selection.fontSize));
+            }
+            if (selection.textAlign) selectAlignment(selection.textAlign);
+            if (selection.verticalAlign) selectAlignment(selection.verticalAlign);
+            if (selection.textCase) selectCase(selection.textCase);
+            if (selection.color) {
+                const colorInput = document.getElementById('color-picker-input');
+                if (colorInput) colorInput.value = selection.color;
+                updateTextColor(selection.color);
+            }
+        }
+
+        // Inherit once per selection. Figma re-sends the same layer on init and
+        // whenever the UI asks, and re-applying would discard edits the user
+        // made in the toolbar since.
+        let lastInheritedKey = null;
+
+        function inheritTypographyOnce(selection) {
+            if (!selection || selection.type !== 'TEXT') { lastInheritedKey = null; return; }
+            const key = JSON.stringify([selection.name, selection.fontFamily, selection.fontStyle,
+                selection.fontSize, selection.textAlign, selection.verticalAlign,
+                selection.textCase, selection.color]);
+            if (key === lastInheritedKey) return;
+            lastInheritedKey = key;
+            inheritTypographyFromSelection(selection);
+        }
+
         function handleSelectionChange(selection) {
             const elements = getDOMElements();
             
@@ -3241,6 +3292,9 @@
                 // Resolve font support first: the character counter and the
                 // animate button below both depend on it
                 updateFontWarning(selection);
+
+                // Start the preview from the layer's own typography
+                inheritTypographyOnce(selection);
 
                 // Check character limit for selected layer
                 updateCharacterCounter(selectedText);
@@ -3282,6 +3336,7 @@
                 // No text layer selected - reset to input mode
                 selectedLayerName = '';
                 updateFontWarning(null);
+                lastInheritedKey = null;
                 
                 // Reset UI to input mode
                 if (elements.textInput) {

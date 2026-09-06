@@ -47,6 +47,14 @@ interface SelectionData {
   fontStyle?: string;
   mixedFonts?: boolean;
   missingFont?: boolean;
+  // Typography the preview adopts by default, already normalised to the UI's
+  // vocabulary. Any field is absent when the layer's value is mixed or has no
+  // equivalent the preview can render.
+  fontSize?: number;
+  textAlign?: 'left' | 'center' | 'right';
+  verticalAlign?: 'top' | 'middle' | 'bottom';
+  textCase?: 'none' | 'uppercase' | 'lowercase' | 'titlecase';
+  color?: string;
 }
 
 // Define a type for plugin messages
@@ -82,6 +90,45 @@ async function loadFontWithFallback(family: string, weight: number): Promise<Fon
     }
   }
   throw new Error(`Could not load font "${family}" or any fallback`);
+}
+
+// ── Reading typography off a canvas layer ────────────────────────────────
+// Character-level properties come back as figma.mixed when a layer is not
+// uniform; there is nothing sensible to inherit in that case.
+function uniform<T>(value: T | PluginAPI['mixed']): T | undefined {
+  return value === figma.mixed ? undefined : (value as T);
+}
+
+const H_ALIGN_TO_UI: { [key: string]: 'left' | 'center' | 'right' } = {
+  LEFT: 'left', CENTER: 'center', RIGHT: 'right', JUSTIFIED: 'left'
+};
+
+const V_ALIGN_TO_UI: { [key: string]: 'top' | 'middle' | 'bottom' } = {
+  TOP: 'top', CENTER: 'middle', BOTTOM: 'bottom'
+};
+
+// SMALL_CAPS has no preview equivalent, so it is deliberately absent here and
+// simply not inherited.
+const TEXT_CASE_TO_UI: { [key: string]: 'none' | 'uppercase' | 'lowercase' | 'titlecase' } = {
+  ORIGINAL: 'none', UPPER: 'uppercase', LOWER: 'lowercase', TITLE: 'titlecase'
+};
+
+function rgbToHex(color: RGB): string {
+  const channel = (c: number) => {
+    const hex = Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  return '#' + channel(color.r) + channel(color.g) + channel(color.b);
+}
+
+// The first visible solid fill — the only kind the preview can represent.
+function firstSolidFillHex(node: TextNode): string | undefined {
+  const fills = uniform(node.fills);
+  if (!fills) return undefined;
+  for (const paint of fills) {
+    if (paint.type === 'SOLID' && paint.visible !== false) return rgbToHex(paint.color);
+  }
+  return undefined;
 }
 
 async function sendTextStylesToUI() {
@@ -148,7 +195,12 @@ function sendSelectionToUI() {
       mixedFonts,
       missingFont: textNode.hasMissingFont,
       fontFamily: mixedFonts ? undefined : (fontName as FontName).family,
-      fontStyle: mixedFonts ? undefined : (fontName as FontName).style
+      fontStyle: mixedFonts ? undefined : (fontName as FontName).style,
+      fontSize: uniform(textNode.fontSize),
+      textAlign: H_ALIGN_TO_UI[textNode.textAlignHorizontal],
+      verticalAlign: V_ALIGN_TO_UI[textNode.textAlignVertical],
+      textCase: TEXT_CASE_TO_UI[uniform(textNode.textCase) as string],
+      color: firstSolidFillHex(textNode)
     };
     
     console.log('Sending text layer to UI:', selectionData);
