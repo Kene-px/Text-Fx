@@ -56,6 +56,27 @@ function weightToFigmaStyle(weight: number): string {
   return map[weight] || 'Regular';
 }
 
+// Load the closest font Figma can actually provide and return the FontName that
+// succeeded. Figma's catalogue does not match Google's family-for-family, and
+// plenty of families carry no weight matching weightToFigmaStyle(), so the
+// requested style must never be assigned without checking what really loaded.
+async function loadFontWithFallback(family: string, weight: number): Promise<FontName> {
+  const candidates: FontName[] = [
+    { family, style: weightToFigmaStyle(weight) },
+    { family, style: 'Regular' },
+    { family: 'Inter', style: 'Regular' }
+  ];
+  for (const candidate of candidates) {
+    try {
+      await figma.loadFontAsync(candidate);
+      return candidate;
+    } catch (_e) {
+      // Unavailable in this document; fall through to the next candidate
+    }
+  }
+  throw new Error(`Could not load font "${family}" or any fallback`);
+}
+
 async function sendTextStylesToUI() {
   const styles = await figma.getLocalTextStylesAsync();
   const styleData = styles.map(s => ({
@@ -294,14 +315,7 @@ async function createTextNodeForFrame(
   // Load selected font, fall back to Inter
   const fontFamily = animation.font?.family || 'Inter';
   const fontWeight = animation.font?.weight || 400;
-  const figmaStyle = weightToFigmaStyle(fontWeight);
-  try {
-    await figma.loadFontAsync({ family: fontFamily, style: figmaStyle });
-  } catch {
-    try { await figma.loadFontAsync({ family: fontFamily, style: 'Regular' }); }
-    catch { await figma.loadFontAsync({ family: 'Inter', style: 'Regular' }); }
-  }
-  textNode.fontName = { family: fontFamily, style: figmaStyle };
+  textNode.fontName = await loadFontWithFallback(fontFamily, fontWeight);
 
   // Apply Figma text style if one was selected; this sets fontName, fontSize, textCase, spacing
   if (animation.textStyleId) {
@@ -1174,14 +1188,7 @@ async function createSlidesAnimation(data: ComponentData) {
       const textNode = figma.createText();
       const sFontFamily = animation.font?.family || 'Inter';
       const sFontWeight = animation.font?.weight || 400;
-      const sFigmaStyle = weightToFigmaStyle(sFontWeight);
-      try {
-        await figma.loadFontAsync({ family: sFontFamily, style: sFigmaStyle });
-      } catch {
-        try { await figma.loadFontAsync({ family: sFontFamily, style: 'Regular' }); }
-        catch { await figma.loadFontAsync({ family: 'Inter', style: 'Regular' }); }
-      }
-      textNode.fontName = { family: sFontFamily, style: sFigmaStyle };
+      textNode.fontName = await loadFontWithFallback(sFontFamily, sFontWeight);
       const frameText = getFrameText(text, animation, i, frameCount);
       textNode.characters = frameText;
       textNode.fontSize = 24;
