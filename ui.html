@@ -638,6 +638,16 @@
             color: #EF4444 !important;
         }
 
+        /* Inherits the warning banner's red so the two never drift apart */
+        .font-warning-link {
+            color: inherit;
+            text-decoration: underline;
+            transition: color 0.2s ease;
+        }
+        .font-warning-link:hover {
+            color: #F87171;
+        }
+
         .character-counter {
             font-size: 10px;
             color: #9CA3AF;
@@ -1569,7 +1579,7 @@
                     Text exceeds 100 character limit. Please shorten before animating.
                 </div>
                 <div class="character-warning" id="font-warning" style="display: none;">
-                    We currently support only google fonts
+                    Only <a href="https://fonts.google.com" target="_blank" rel="noopener noreferrer" class="font-warning-link">Google Fonts</a> are currently supported.
                 </div>
             </div>
         </div>
