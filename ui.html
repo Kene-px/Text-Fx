@@ -4412,6 +4412,9 @@
             // CRITICAL: Reset preview text state completely before applying new animation
             elements.previewText.innerHTML = '';
             elements.previewText.className = 'preview-text';
+            // Rewind the horizontal scroll so a replay starts at the line's head
+            const previewScroll = document.querySelector('.preview-scroll');
+            if (previewScroll) previewScroll.scrollLeft = 0;
             elements.previewText.style.transform = '';
             elements.previewText.style.opacity = '';
             elements.previewText.style.animation = '';
@@ -4466,6 +4469,19 @@
             }
         }
 
+        // Keep the typing cursor inside the preview. Once the line outgrows the
+        // window the scroll is pinned to the end, so the cursor holds at the
+        // right edge and the text is pushed left instead of running off. The
+        // container is scrolled rather than the text moved, so the user can
+        // still drag back to read the part that has scrolled out.
+        function keepTypingCursorInView() {
+            const scroller = document.querySelector('.preview-scroll');
+            if (!scroller) return;
+            // Clamped rather than left to the browser: while the line still
+            // fits there is no overflow and nothing should move.
+            scroller.scrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+        }
+
         function animateTyping(text, typeBy, direction, duration) {
             const elements = getDOMElements();
             if (!elements.previewText) return;
@@ -4502,6 +4518,7 @@
                         }
                         
                         textContainer.textContent = displayedText;
+                        keepTypingCursorInView();
                         charIndex++;
                         window.currentTypingTimeout = setTimeout(typeNextChar, typingSpeed);
                     } else {
@@ -4544,7 +4561,8 @@
                             const startWordIndex = Math.max(0, words.length - wordsToShow);
                             textContainer.textContent = words.slice(startWordIndex).join(' ');
                         }
-                        
+
+                        keepTypingCursorInView();
                         wordIndex++;
                         window.currentTypingTimeout = setTimeout(typeNextWord, typingSpeed);
                     } else {
