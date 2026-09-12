@@ -277,8 +277,10 @@
                it; stays at 100% for text that already fits */
             min-width: max-content;
             display: flex;
+            /* Defaults matching animationSettings: Align Left horizontally,
+               centred vertically. JS overrides both from the align picker. */
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             /* Even padding now that .preview-scroll clears the controls bar */
             padding: 20px;
         }
@@ -487,7 +489,7 @@
 
         .preview-text {
             color: #fcfcfc;
-            text-align: center;
+            text-align: left;
             /* Long text runs off to the side and is reached by scrolling
                across, rather than wrapping onto further lines */
             white-space: nowrap;
@@ -2250,6 +2252,16 @@
             currentTimeout: null,
             currentIndex: 0
         };
+
+        // The preview loops for as long as it is playing. Each animator reports
+        // how long one pass of it really lasts and playAnimation() waits that
+        // long plus this gap before starting the next, so a pass is never cut
+        // short by the loop that is meant to repeat it.
+        const LOOP_GAP_MS = 200;
+
+        // Extra beat a shrink pass holds on empty space before repeating, on top
+        // of LOOP_GAP_MS, so the text does not appear to flicker back instantly.
+        const SHRINK_HOLD_MS = 600;
         
         // Feedback Modal State
         let selectedFile = null;
@@ -2531,18 +2543,27 @@
                 playPauseBtn.setAttribute('data-state', 'playing');
             }
 
-            // Start the continuous animation loop
+            // Start the continuous animation loop. applyAnimation() reports how
+            // long the pass it just started runs for, which is rarely
+            // animationSettings.duration: letters and words are staggered on top
+            // of it, and typing paces itself off a per-character minimum. The
+            // reported length is what the next pass is scheduled from.
             const runAnimationLoop = () => {
                 if (!animationState.isPlaying) return;
-                
-                applyAnimation();
-                
-                // Schedule next loop
+
+                const reported = applyAnimation();
+                // An animator that bailed out reports nothing; fall back to the
+                // configured duration rather than scheduling on NaN, which
+                // setTimeout would treat as zero and spin.
+                const cycleMs = Number.isFinite(reported) && reported > 0
+                    ? reported
+                    : animationSettings.duration;
+
                 animationState.currentTimeout = setTimeout(() => {
                     if (animationState.isPlaying) {
                         runAnimationLoop();
                     }
-                }, animationSettings.duration + 200); // Small gap between loops
+                }, cycleMs + LOOP_GAP_MS);
             };
             
             runAnimationLoop();
@@ -3067,6 +3088,7 @@
         // Initialize
         function init() {
             setupEventListeners();
+            setupPreviewWarnings();
             setupDurationArrows();
             setupFeedbackModal();
             initializeColorPicker();
@@ -3231,11 +3253,79 @@
         // the animate button's enabled state and neither may override this veto.
         let selectedFontUnsupported = false;
 
+        // One banner per screen, for each of the two reasons text can be refused.
+        // Step 1's banners live in the markup; the preview's are cloned from them
+        // at startup so the wording and the link can never drift apart, and both
+        // copies are driven from here.
+        const FONT_WARNING_IDS = ['font-warning', 'preview-font-warning'];
+        const CHARACTER_WARNING_IDS = ['character-warning', 'preview-character-warning'];
+
+        // The one definition of the limit. Line breaks do not count towards it.
+        const CHAR_LIMIT = 100;
+
+        function charCountOf(text) {
+            return String(text || '').replace(/\n|\r\n|\r/g, '').length;
+        }
+
+        // "Exceeds" means past the limit, not at it: the banner reads "exceeds 100
+        // character limit" and 100 characters is the most that is allowed. Every
+        // check — the counter, both banners, the Animate button and the guard on
+        // entering the preview — goes through here, so they cannot disagree.
+        function exceedsCharLimit(text) {
+            return charCountOf(text) > CHAR_LIMIT;
+        }
+
+        function setupPreviewWarnings() {
+            const previewSection = document.getElementById('preview-section');
+            if (!previewSection) return;
+            const backBtn = document.getElementById('back-btn');
+
+            // Cloned in reverse so they end up in markup order under the back
+            // button: the font warning first, the character warning below it.
+            [['character-warning', 'preview-character-warning'],
+             ['font-warning', 'preview-font-warning']].forEach(([sourceId, cloneId]) => {
+                const source = document.getElementById(sourceId);
+                if (!source || document.getElementById(cloneId)) return;
+
+                const clone = source.cloneNode(true);
+                clone.id = cloneId;
+                clone.style.display = 'none';
+                clone.style.marginBottom = '8px';
+
+                // Directly under the back button, where it is the first thing read
+                // on the screen rather than something below the fold.
+                if (backBtn && backBtn.parentNode === previewSection) {
+                    previewSection.insertBefore(clone, backBtn.nextSibling);
+                } else {
+                    previewSection.insertBefore(clone, previewSection.firstChild);
+                }
+            });
+        }
+
+        // Shows or hides one pair of banners and resizes the window if that
+        // changed, since a banner takes vertical space on whichever screen is up.
+        function setWarningVisible(ids, visible) {
+            let changed = false;
+            ids.forEach(id => {
+                const warning = document.getElementById(id);
+                if (!warning) return;
+                const next = visible ? 'block' : 'none';
+                if (warning.style.display !== next) changed = true;
+                warning.style.display = next;
+            });
+            if (changed) resizePluginToContent();
+        }
+
         function updateFontWarning(selection) {
             selectedFontUnsupported = isFontUnsupported(selection);
-            const warning = document.getElementById('font-warning');
-            if (!warning) return;
-            warning.style.display = selectedFontUnsupported ? 'block' : 'none';
+            setWarningVisible(FONT_WARNING_IDS, selectedFontUnsupported);
+        }
+
+        // Split out from updateCharacterCounter so the preview screen can raise
+        // the alert for text it is refusing without also adopting that text's
+        // count — updateCharacterCounter re-derives the default duration from it.
+        function updateCharacterWarning(text) {
+            setWarningVisible(CHARACTER_WARNING_IDS, exceedsCharLimit(text));
         }
 
         // Adopt the selected layer's typography so the preview starts from what
@@ -3265,7 +3355,13 @@
                 selectFontSize(Math.round(selection.fontSize));
             }
             if (selection.textAlign) selectAlignment(selection.textAlign);
-            if (selection.verticalAlign) selectAlignment(selection.verticalAlign);
+            // Vertical alignment is deliberately not inherited. Figma leaves
+            // textAlignVertical at TOP on every text layer that has not been given
+            // a fixed height — which is nearly all of them — so adopting it would
+            // pin the preview to the top of the window and show Align Top as the
+            // selection on layers whose author never chose it. The preview window
+            // is a viewport rather than the layer's own frame, so it keeps its own
+            // default of centred until the user picks otherwise.
             if (selection.textCase) selectCase(selection.textCase);
             if (selection.color) {
                 const colorInput = document.getElementById('color-picker-input');
@@ -3281,8 +3377,12 @@
 
         function inheritTypographyOnce(selection) {
             if (!selection || selection.type !== 'TEXT') { lastInheritedKey = null; return; }
+            // verticalAlign is not part of the key: it is not inherited, so a
+            // layer that differs only by it is the same layer as far as the
+            // preview is concerned, and re-inheriting would discard the user's
+            // toolbar edits for no reason.
             const key = JSON.stringify([selection.name, selection.fontFamily, selection.fontStyle,
-                selection.fontSize, selection.textAlign, selection.verticalAlign,
+                selection.fontSize, selection.textAlign,
                 selection.textCase, selection.color]);
             if (key === lastInheritedKey) return;
             lastInheritedKey = key;
@@ -3293,13 +3393,31 @@
             const elements = getDOMElements();
             
             if (selection && selection.type === 'TEXT') {
+                // Resolve font support first: whether this layer can be taken on
+                // at all, and the character counter and animate button below, all
+                // depend on it.
+                updateFontWarning(selection);
+
+                // The same alert for text that is too long, so the banner is up
+                // before the layer is either taken on or refused below.
+                updateCharacterWarning(selection.content);
+
+                // On the preview screen a layer the plugin cannot animate is
+                // refused rather than silently becoming the subject — an
+                // unsupported font cannot be rendered here nor reproduced in the
+                // component, and text past the limit cannot be animated at all.
+                // The preview keeps what it was already showing and the banner
+                // above says why. Step 1 still takes the text on — shown in the
+                // disabled input with Animate blocked — which is the behaviour
+                // there.
+                if (currentStep === 2 &&
+                    (selectedFontUnsupported || exceedsCharLimit(selection.content))) {
+                    return;
+                }
+
                 // Text layer selected
                 selectedLayerName = selection.name;
                 selectedText = selection.content || '';
-
-                // Resolve font support first: the character counter and the
-                // animate button below both depend on it
-                updateFontWarning(selection);
 
                 // Start the preview from the layer's own typography
                 inheritTypographyOnce(selection);
@@ -3335,9 +3453,8 @@
                 }
                 
                 // Enable animate button only if within character limit
-                const cleanText = selectedText.replace(/\n|\r\n|\r/g, '');
                 if (elements.animateBtn) {
-                    elements.animateBtn.disabled = cleanText.length > 100 || selectedFontUnsupported;
+                    elements.animateBtn.disabled = exceedsCharLimit(selectedText) || selectedFontUnsupported;
                 }
 
             } else {
@@ -3373,9 +3490,8 @@
                 }
                 
                 // Update animate button state based on input content and character limit
-                const cleanText = selectedText.replace(/\n|\r\n|\r/g, '');
                 if (elements.animateBtn) {
-                    elements.animateBtn.disabled = !selectedText.trim() || cleanText.length > 100;
+                    elements.animateBtn.disabled = !selectedText.trim() || exceedsCharLimit(selectedText);
                 }
             }
             
@@ -3398,35 +3514,35 @@
         // Character counting and validation
         function updateCharacterCounter(text) {
             const counter = document.getElementById('character-counter');
-            const warning = document.getElementById('character-warning');
             const animateBtn = document.getElementById('animate-btn');
             
             if (!counter) return;
             
-            // Remove line breaks from character count
-            const cleanText = text.replace(/\n|\r\n|\r/g, '');
-            const charCount = cleanText.length;
-            const remaining = 100 - charCount;
+            // Line breaks do not count towards the limit
+            const charCount = charCountOf(text);
+            const overLimit = exceedsCharLimit(text);
 
             // Update counter display
-            counter.textContent = `${charCount}/100`;
+            counter.textContent = `${charCount}/${CHAR_LIMIT}`;
 
             // Update default duration based on character count
             updateDefaultDuration(charCount);
 
-            // Update counter color based on character count
+            // Both copies of the banner, on whichever screen is showing
+            updateCharacterWarning(text);
+
+            // Update counter color based on character count. The counter turns red
+            // once the limit is reached, a step before the text actually exceeds it
+            // and the banner appears.
             counter.classList.remove('warning', 'error');
-            if (charCount >= 100) {
+            if (charCount >= CHAR_LIMIT) {
                 counter.classList.add('error');
-                warning.style.display = 'block';
-                if (animateBtn) animateBtn.disabled = true;
             } else if (charCount >= 80) {
                 counter.classList.add('warning');
-                warning.style.display = 'none';
-                if (animateBtn) animateBtn.disabled = selectedFontUnsupported;
-            } else {
-                warning.style.display = 'none';
-                if (animateBtn && selectedText.trim()) animateBtn.disabled = selectedFontUnsupported;
+            }
+
+            if (animateBtn) {
+                animateBtn.disabled = overLimit || selectedFontUnsupported || !selectedText.trim();
             }
         }
 
@@ -3485,9 +3601,12 @@
                     elements.inputLabel.style.color = '#fcfcfc';
                 }
                 
-                // Enable/disable animate button based on input content
+                // Enable/disable animate button based on input content. The limit
+                // is checked here too: this runs after updateCharacterCounter on
+                // every keystroke, so without it typed text past the limit showed
+                // the banner but left the button live.
                 if (elements.animateBtn) {
-                    elements.animateBtn.disabled = !selectedText.trim();
+                    elements.animateBtn.disabled = !selectedText.trim() || exceedsCharLimit(selectedText);
                 }
                 
                 // Ensure input is enabled
@@ -3513,6 +3632,9 @@
         function goToPreview() {
             if (!selectedText.trim()) return;
             if (selectedFontUnsupported) return;
+            // Belt as well as braces: the button above is disabled for over-limit
+            // text, but the guard is what actually keeps it off the preview.
+            if (exceedsCharLimit(selectedText)) return;
             
             const elements = getDOMElements();
             if (!elements.chooseSection || !elements.previewSection) return;
@@ -3537,6 +3659,7 @@
                 elements.previewText.textContent = selectedText.trim();
                 elements.previewText.style.color = animationSettings.color;
                 elements.previewText.className = 'preview-text';
+                elements.previewText.style.textAlign = animationSettings.textAlign || 'left';
                 if (animationSettings.font) {
                     elements.previewText.style.fontFamily = `'${animationSettings.font.family}', sans-serif`;
                     elements.previewText.style.fontWeight = animationSettings.font.weight || 400;
@@ -3546,6 +3669,13 @@
                 }
             }
             
+            // Place the line for the current alignment before the first pass runs
+            const previewInner = document.getElementById('preview-inner');
+            if (previewInner) {
+                previewInner.style.justifyContent = HORIZONTAL_FLEX[animationSettings.textAlign] || 'flex-start';
+                previewInner.style.alignItems = VERTICAL_FLEX[animationSettings.verticalAlign] || 'center';
+            }
+
             // Ensure play/pause button is visible
             const playPauseBtn = document.getElementById('play-pause-btn');
             if (playPauseBtn) {
@@ -3571,13 +3701,24 @@
         function goToChoose() {
             const elements = getDOMElements();
             if (!elements.chooseSection || !elements.previewSection) return;
-            
+
+            // Stop the loop on the way out. Nothing on this step shows the
+            // preview, and leaving it running would keep animating a hidden
+            // element — and would let a typography change made here restart it.
+            // goToPreview() starts a fresh pass on the way back in.
+            pauseAnimation();
+
             elements.previewSection.classList.add('hiding');
             setTimeout(() => {
             currentStep = 1;
             elements.previewSection.style.display = 'none';
             elements.previewSection.classList.remove('hiding');
             elements.chooseSection.style.display = 'block';
+
+            // Re-read the selection now that step 1 is showing. A layer refused
+            // while previewing was never taken on, so without this the input and
+            // the layer name here would still describe the previous subject.
+            parent.postMessage({ pluginMessage: { type: 'get-selection' } }, '*');
             
             // Update step indicators
             if (elements.step1) elements.step1.classList.add('active');
@@ -3978,6 +4119,11 @@
 
         const VERTICAL_FLEX = { top: 'flex-start', middle: 'center', bottom: 'flex-end' };
 
+        // .preview-text hugs its own content and never wraps, so text-align alone
+        // cannot move it: the line has to be placed by the flex container around
+        // it. Without this, Align Left / Center / Right all rendered identically.
+        const HORIZONTAL_FLEX = { left: 'flex-start', center: 'center', right: 'flex-end' };
+
         function selectAlignment(align) {
             const isVertical = VERTICAL_ALIGNS.includes(align);
 
@@ -3989,6 +4135,8 @@
                 animationSettings.textAlign = align;
                 const previewText = document.getElementById('preview-text');
                 if (previewText) previewText.style.textAlign = align;
+                const inner = document.getElementById('preview-inner');
+                if (inner) inner.style.justifyContent = HORIZONTAL_FLEX[align];
             }
 
             const alignBtn = document.getElementById('font-align-btn');
@@ -4374,12 +4522,23 @@
                 }
             }
             
-            // Apply new animation with requestAnimationFrame for smoother transitions
+            // Apply new animation with requestAnimationFrame for smoother
+            // transitions. While playing, re-enter through playAnimation() so the
+            // loop survives the change: applyAnimation() clears the pending loop
+            // timeout, so calling it on its own would stop the preview after one
+            // pass every time a setting changed.
             requestAnimationFrame(() => {
-                applyAnimation();
+                if (animationState.isPlaying) {
+                    playAnimation();
+                } else {
+                    applyAnimation();
+                }
             });
         }
 
+        // Starts one pass of the current animation and returns how many
+        // milliseconds that pass lasts, for runAnimationLoop() to schedule the
+        // repeat from. Every animator it dispatches to returns the same.
         function applyAnimation() {
             const elements = getDOMElements();
             const text = getProcessedText();
@@ -4434,38 +4593,42 @@
             if (previewInner && animationSettings.verticalAlign) {
                 previewInner.style.alignItems = VERTICAL_FLEX[animationSettings.verticalAlign] || 'center';
             }
+            if (previewInner && animationSettings.textAlign) {
+                previewInner.style.justifyContent = HORIZONTAL_FLEX[animationSettings.textAlign] || 'flex-start';
+            }
 
             // Set animation duration
             elements.previewText.style.animationDuration = `${duration}ms`;
             
             if (style === 'typing') {
-                animateTyping(text, typeBy, direction, duration);
+                return animateTyping(text, typeBy, direction, duration);
             } else if (style === 'scale') {
                 const scaleType = direction === 'forward' ? 'scale-grow' : 'scale-shrink';
-                animateScale(text, typeBy, direction, duration, scaleType);
+                return animateScale(text, typeBy, direction, duration, scaleType);
             } else if (style === 'rotate') {
-                animateRotate(text, typeBy, direction, duration, style);
+                return animateRotate(text, typeBy, direction, duration, style);
             } else if (style === 'fade') {
                 // forward = fade-in, backwards = fade-out
                 const fadeClass = direction === 'forward' ? 'fade-in' : 'fade-out';
                 if (typeBy === 'letter') {
-                    animateByLetter(text, fadeClass, direction, duration);
+                    return animateByLetter(text, fadeClass, direction, duration);
                 } else {
-                    animateByWord(text, fadeClass, direction, duration);
+                    return animateByWord(text, fadeClass, direction, duration);
                 }
             } else if (style === 'slide') {
                 // forward = slide-up (in), backwards = slide-out
                 const slideClass = direction === 'forward' ? 'slide-up' : 'slide-out';
                 if (typeBy === 'letter') {
-                    animateByLetter(text, slideClass, direction, duration);
+                    return animateByLetter(text, slideClass, direction, duration);
                 } else {
-                    animateByWord(text, slideClass, direction, duration);
+                    return animateByWord(text, slideClass, direction, duration);
                 }
             } else if (typeBy === 'letter') {
-                animateByLetter(text, style, direction, duration);
+                return animateByLetter(text, style, direction, duration);
             } else {
                 elements.previewText.textContent = text;
                 elements.previewText.classList.add(`animate-${style}`);
+                return duration;
             }
         }
 
@@ -4533,7 +4696,12 @@
                 
                 // Start typing after a brief pause
                 window.currentTypingTimeout = setTimeout(typeNextChar, 100);
-                
+
+                // The 100ms lead-in, one tick per character at a floor of 50ms,
+                // then the 500ms the cursor stays up after the last one. For long
+                // text this is well past `duration`, which is why the loop cannot
+                // be scheduled off `duration` alone.
+                return 100 + chars.length * typingSpeed + 500;
             } else {
                 // Word-by-word typing
                 const words = text.split(' ');
@@ -4577,6 +4745,8 @@
                 
                 // Start typing after a brief pause
                 window.currentTypingTimeout = setTimeout(typeNextWord, 100);
+
+                return 100 + words.length * typingSpeed + 500;
             }
         }
 
@@ -4606,6 +4776,12 @@
                 
                 elements.previewText.appendChild(span);
             });
+
+            // The last span in the sweep waits out the stagger twice over: once
+            // for the timeout that adds its class, then again for the inline
+            // animation-delay that only starts counting from there. Its animation
+            // then runs for the full duration, and that is when the pass is over.
+            return Math.max(0, letters.length - 1) * staggerDelay * 2 + duration;
         }
 
         function animateByWord(text, animClass, direction, duration) {
@@ -4638,6 +4814,9 @@
 
                 elements.previewText.appendChild(span);
             });
+
+            // Staggered twice, as in animateByLetter.
+            return Math.max(0, words.length - 1) * staggerDelay * 2 + duration;
         }
 
         function animateScale(text, typeBy, direction, duration, style) {
@@ -4648,10 +4827,10 @@
 
             if (typeBy === 'letter') {
                 // Scale by sentence - whole text scales at once
-                animateScaleBySentence(text, duration, style);
+                return animateScaleBySentence(text, duration, style);
             } else {
                 // Scale by word - each word scales as a unit
-                animateScaleByWord(text, direction, duration, style);
+                return animateScaleByWord(text, direction, duration, style);
             }
         }
 
@@ -4681,27 +4860,21 @@
                     elements.previewText.classList.add('animate-scale-grow');
                     elements.previewText.style.animationDuration = `${duration}ms`;
                     
-                    // After animation completes, prepare for next loop
+                    // Hold the grown state once the keyframes end. The repeat is
+                    // playAnimation()'s job, not this function's.
                     const timeout = setTimeout(() => {
                         if (!animationState.isPlaying) return; // Check if still playing
                         
                         if (elements.previewText) {
-                            // Reset for next loop
                             elements.previewText.classList.remove('animate-scale-grow');
                             elements.previewText.style.transform = 'scale(1)';
                             elements.previewText.style.opacity = '1';
-                            
-                            // Wait a brief moment then restart the animation
-                            const loopTimeout = setTimeout(() => {
-                                if (!animationState.isPlaying) return; // Check if still playing
-                                animateScaleBySentence(text, duration, style);
-                            }, 200); // Brief pause between loops
-                            
-                            window.scaleAnimationTimeouts.push(loopTimeout);
                         }
                     }, duration);
                     window.scaleAnimationTimeouts.push(timeout);
                 });
+
+                return duration;
             } else if (style === 'scale-shrink') {
                 // Start visible and normal size
                 elements.previewText.style.transform = 'scale(1)';
@@ -4714,30 +4887,25 @@
                     elements.previewText.classList.add('animate-scale-shrink');
                     elements.previewText.style.animationDuration = `${duration}ms`;
                     
-                    // After animation completes, prepare for next loop
+                    // scaleShrink has no fill mode, so the text would spring back
+                    // into view the moment the keyframes end. Pin it to the shrunk
+                    // state instead and let the pass sit there.
                     const timeout = setTimeout(() => {
                         if (!animationState.isPlaying) return; // Check if still playing
                         
                         if (elements.previewText) {
-                            // Remove animation class but stay in final state (invisible)
                             elements.previewText.classList.remove('animate-scale-shrink');
                             elements.previewText.style.transform = 'scale(0)';
                             elements.previewText.style.opacity = '0';
-                            
-                            // Wait longer to show invisible state, then reset and restart
-                            const loopTimeout = setTimeout(() => {
-                                if (!animationState.isPlaying) return; // Check if still playing
-                                // Now reset to visible state (State A) and restart
-                                elements.previewText.style.transform = 'scale(1)';
-                                elements.previewText.style.opacity = '1';
-                                animateScaleBySentence(text, duration, style);
-                            }, 800); // Longer pause to show the "shrunk" state
-                            
-                            window.scaleAnimationTimeouts.push(loopTimeout);
                         }
                     }, duration);
                     window.scaleAnimationTimeouts.push(timeout);
                 });
+
+                // Shrinking ends on empty space, so the pass deliberately holds
+                // there before repeating — long enough to read as a beat rather
+                // than a stutter. The next pass resets the transform.
+                return duration + SHRINK_HOLD_MS;
             }
         }
 
@@ -4838,24 +5006,9 @@
                 });
             }
             
-            // Schedule the next loop after all words have finished animating
-            const loopTimeout = setTimeout(() => {
-                if (!animationState.isPlaying) return; // Check if still playing
-                
-                // Reset preview text for next loop
-                elements.previewText.innerHTML = '';
-                elements.previewText.className = 'preview-text';
-                
-                // Wait a brief moment then restart the animation
-                const restartTimeout = setTimeout(() => {
-                    if (!animationState.isPlaying) return; // Check if still playing
-                    animateScaleByWord(text, direction, duration, style);
-                }, 200); // Brief pause between loops
-                
-                window.scaleAnimationTimeouts.push(restartTimeout);
-            }, totalAnimationTime + 200); // Wait for all animations to complete plus a small buffer
-            
-            window.scaleAnimationTimeouts.push(loopTimeout);
+            // The pass runs until the last word has finished its own animation;
+            // playAnimation() clears the preview and starts the next one.
+            return totalAnimationTime;
         }
 
         function animateRotate(text, typeBy, direction, duration, style) {
@@ -4865,9 +5018,9 @@
             // Note: Cleanup is now handled in applyAnimation() - no need to clear here
 
             if (typeBy === 'letter') {
-                animateRotateByLetter(text, direction, duration);
+                return animateRotateByLetter(text, direction, duration);
             } else {
-                animateRotateByWord(text, direction, duration, style);
+                return animateRotateByWord(text, direction, duration, style);
             }
         }
 
@@ -4883,7 +5036,10 @@
             const letters = text.split('');
             const staggerDelay = Math.max(50, duration / (letters.length * 2));
             const rotateClass = direction === 'backwards' ? 'animate-rotate-backwards' : 'animate-rotate';
-            const totalTime = (letters.length - 1) * staggerDelay + duration;
+            // Each letter's stagger is paid twice — the timeout that adds the class
+            // and the inline animation-delay that follows it — so the last letter
+            // finishes two sweeps plus one animation in.
+            const totalTime = Math.max(0, letters.length - 1) * staggerDelay * 2 + duration;
 
             letters.forEach((letter, index) => {
                 const span = document.createElement('span');
@@ -4902,17 +5058,7 @@
                 window.rotateAnimationTimeouts.push(t);
             });
 
-            // Loop
-            const loopTimeout = setTimeout(() => {
-                if (!animationState.isPlaying) return;
-                elements.previewText.innerHTML = '';
-                const restartTimeout = setTimeout(() => {
-                    if (!animationState.isPlaying) return;
-                    animateRotateByLetter(text, direction, duration);
-                }, 200);
-                window.rotateAnimationTimeouts.push(restartTimeout);
-            }, totalTime + 200);
-            window.rotateAnimationTimeouts.push(loopTimeout);
+            return totalTime;
         }
 
         function animateRotateBySentence(text, duration, style, direction) {
@@ -4934,26 +5080,22 @@
             elements.previewText.classList.add(rotateClass);
             elements.previewText.style.animationDuration = `${duration}ms`;
             
-            // Schedule next loop after animation completes
+            // Clear the class once the keyframes end so the next pass can re-add
+            // it. animateRotate() does not currently route here — letter goes to
+            // animateRotateByLetter — but it follows the same contract as the
+            // rest: start a pass, report its length, leave looping to the driver.
             const timeout = setTimeout(() => {
                 if (!animationState.isPlaying) return; // Check if still playing
                 
                 if (elements.previewText) {
-                    // Reset for next loop - remove both possible rotate classes
                     elements.previewText.classList.remove('animate-rotate', 'animate-rotate-backwards');
                     elements.previewText.style.transform = '';
                     elements.previewText.style.opacity = '';
-                    
-                    // Wait a brief moment then restart the animation
-                    const loopTimeout = setTimeout(() => {
-                        if (!animationState.isPlaying) return; // Check if still playing
-                        animateRotateBySentence(text, duration, style, direction);
-                    }, 200); // Brief pause between loops
-                    
-                    window.rotateAnimationTimeouts.push(loopTimeout);
                 }
             }, duration);
             window.rotateAnimationTimeouts.push(timeout);
+
+            return duration;
         }
 
         function animateRotateByWord(text, direction, duration, style) {
@@ -5046,24 +5188,7 @@
                 });
             }
             
-            // Schedule next loop after all words complete (like scale word animation)
-            const loopTimeout = setTimeout(() => {
-                if (!animationState.isPlaying) return;
-                
-                // Reset preview text for next loop
-                elements.previewText.innerHTML = '';
-                elements.previewText.className = 'preview-text';
-                
-                // Wait a brief moment then restart the animation
-                const restartTimeout = setTimeout(() => {
-                    if (!animationState.isPlaying) return;
-                    animateRotateByWord(text, direction, duration, style);
-                }, 200);
-                
-                window.rotateAnimationTimeouts.push(restartTimeout);
-            }, totalTime + 200);
-            
-            window.rotateAnimationTimeouts.push(loopTimeout);
+            return totalTime;
         }
 
         function createComponent() {
