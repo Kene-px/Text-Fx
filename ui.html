@@ -277,8 +277,10 @@
                it; stays at 100% for text that already fits */
             min-width: max-content;
             display: flex;
+            /* Defaults matching animationSettings: Align Left horizontally,
+               centred vertically. JS overrides both from the align picker. */
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             /* Even padding now that .preview-scroll clears the controls bar */
             padding: 20px;
         }
@@ -487,7 +489,7 @@
 
         .preview-text {
             color: #fcfcfc;
-            text-align: center;
+            text-align: left;
             /* Long text runs off to the side and is reached by scrolling
                across, rather than wrapping onto further lines */
             white-space: nowrap;
@@ -3556,6 +3558,7 @@
                 elements.previewText.textContent = selectedText.trim();
                 elements.previewText.style.color = animationSettings.color;
                 elements.previewText.className = 'preview-text';
+                elements.previewText.style.textAlign = animationSettings.textAlign || 'left';
                 if (animationSettings.font) {
                     elements.previewText.style.fontFamily = `'${animationSettings.font.family}', sans-serif`;
                     elements.previewText.style.fontWeight = animationSettings.font.weight || 400;
@@ -3565,6 +3568,13 @@
                 }
             }
             
+            // Place the line for the current alignment before the first pass runs
+            const previewInner = document.getElementById('preview-inner');
+            if (previewInner) {
+                previewInner.style.justifyContent = HORIZONTAL_FLEX[animationSettings.textAlign] || 'flex-start';
+                previewInner.style.alignItems = VERTICAL_FLEX[animationSettings.verticalAlign] || 'center';
+            }
+
             // Ensure play/pause button is visible
             const playPauseBtn = document.getElementById('play-pause-btn');
             if (playPauseBtn) {
@@ -4003,6 +4013,11 @@
 
         const VERTICAL_FLEX = { top: 'flex-start', middle: 'center', bottom: 'flex-end' };
 
+        // .preview-text hugs its own content and never wraps, so text-align alone
+        // cannot move it: the line has to be placed by the flex container around
+        // it. Without this, Align Left / Center / Right all rendered identically.
+        const HORIZONTAL_FLEX = { left: 'flex-start', center: 'center', right: 'flex-end' };
+
         function selectAlignment(align) {
             const isVertical = VERTICAL_ALIGNS.includes(align);
 
@@ -4014,6 +4029,8 @@
                 animationSettings.textAlign = align;
                 const previewText = document.getElementById('preview-text');
                 if (previewText) previewText.style.textAlign = align;
+                const inner = document.getElementById('preview-inner');
+                if (inner) inner.style.justifyContent = HORIZONTAL_FLEX[align];
             }
 
             const alignBtn = document.getElementById('font-align-btn');
@@ -4469,6 +4486,9 @@
             const previewInner = document.getElementById('preview-inner');
             if (previewInner && animationSettings.verticalAlign) {
                 previewInner.style.alignItems = VERTICAL_FLEX[animationSettings.verticalAlign] || 'center';
+            }
+            if (previewInner && animationSettings.textAlign) {
+                previewInner.style.justifyContent = HORIZONTAL_FLEX[animationSettings.textAlign] || 'flex-start';
             }
 
             // Set animation duration
