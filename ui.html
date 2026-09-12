@@ -2250,6 +2250,16 @@
             currentTimeout: null,
             currentIndex: 0
         };
+
+        // The preview loops for as long as it is playing. Each animator reports
+        // how long one pass of it really lasts and playAnimation() waits that
+        // long plus this gap before starting the next, so a pass is never cut
+        // short by the loop that is meant to repeat it.
+        const LOOP_GAP_MS = 200;
+
+        // Extra beat a shrink pass holds on empty space before repeating, on top
+        // of LOOP_GAP_MS, so the text does not appear to flicker back instantly.
+        const SHRINK_HOLD_MS = 600;
         
         // Feedback Modal State
         let selectedFile = null;
@@ -2531,18 +2541,27 @@
                 playPauseBtn.setAttribute('data-state', 'playing');
             }
 
-            // Start the continuous animation loop
+            // Start the continuous animation loop. applyAnimation() reports how
+            // long the pass it just started runs for, which is rarely
+            // animationSettings.duration: letters and words are staggered on top
+            // of it, and typing paces itself off a per-character minimum. The
+            // reported length is what the next pass is scheduled from.
             const runAnimationLoop = () => {
                 if (!animationState.isPlaying) return;
-                
-                applyAnimation();
-                
-                // Schedule next loop
+
+                const reported = applyAnimation();
+                // An animator that bailed out reports nothing; fall back to the
+                // configured duration rather than scheduling on NaN, which
+                // setTimeout would treat as zero and spin.
+                const cycleMs = Number.isFinite(reported) && reported > 0
+                    ? reported
+                    : animationSettings.duration;
+
                 animationState.currentTimeout = setTimeout(() => {
                     if (animationState.isPlaying) {
                         runAnimationLoop();
                     }
-                }, animationSettings.duration + 200); // Small gap between loops
+                }, cycleMs + LOOP_GAP_MS);
             };
             
             runAnimationLoop();
@@ -3571,7 +3590,13 @@
         function goToChoose() {
             const elements = getDOMElements();
             if (!elements.chooseSection || !elements.previewSection) return;
-            
+
+            // Stop the loop on the way out. Nothing on this step shows the
+            // preview, and leaving it running would keep animating a hidden
+            // element — and would let a typography change made here restart it.
+            // goToPreview() starts a fresh pass on the way back in.
+            pauseAnimation();
+
             elements.previewSection.classList.add('hiding');
             setTimeout(() => {
             currentStep = 1;
@@ -4374,12 +4399,23 @@
                 }
             }
             
-            // Apply new animation with requestAnimationFrame for smoother transitions
+            // Apply new animation with requestAnimationFrame for smoother
+            // transitions. While playing, re-enter through playAnimation() so the
+            // loop survives the change: applyAnimation() clears the pending loop
+            // timeout, so calling it on its own would stop the preview after one
+            // pass every time a setting changed.
             requestAnimationFrame(() => {
-                applyAnimation();
+                if (animationState.isPlaying) {
+                    playAnimation();
+                } else {
+                    applyAnimation();
+                }
             });
         }
 
+        // Starts one pass of the current animation and returns how many
+        // milliseconds that pass lasts, for runAnimationLoop() to schedule the
+        // repeat from. Every animator it dispatches to returns the same.
         function applyAnimation() {
             const elements = getDOMElements();
             const text = getProcessedText();
@@ -4439,33 +4475,34 @@
             elements.previewText.style.animationDuration = `${duration}ms`;
             
             if (style === 'typing') {
-                animateTyping(text, typeBy, direction, duration);
+                return animateTyping(text, typeBy, direction, duration);
             } else if (style === 'scale') {
                 const scaleType = direction === 'forward' ? 'scale-grow' : 'scale-shrink';
-                animateScale(text, typeBy, direction, duration, scaleType);
+                return animateScale(text, typeBy, direction, duration, scaleType);
             } else if (style === 'rotate') {
-                animateRotate(text, typeBy, direction, duration, style);
+                return animateRotate(text, typeBy, direction, duration, style);
             } else if (style === 'fade') {
                 // forward = fade-in, backwards = fade-out
                 const fadeClass = direction === 'forward' ? 'fade-in' : 'fade-out';
                 if (typeBy === 'letter') {
-                    animateByLetter(text, fadeClass, direction, duration);
+                    return animateByLetter(text, fadeClass, direction, duration);
                 } else {
-                    animateByWord(text, fadeClass, direction, duration);
+                    return animateByWord(text, fadeClass, direction, duration);
                 }
             } else if (style === 'slide') {
                 // forward = slide-up (in), backwards = slide-out
                 const slideClass = direction === 'forward' ? 'slide-up' : 'slide-out';
                 if (typeBy === 'letter') {
-                    animateByLetter(text, slideClass, direction, duration);
+                    return animateByLetter(text, slideClass, direction, duration);
                 } else {
-                    animateByWord(text, slideClass, direction, duration);
+                    return animateByWord(text, slideClass, direction, duration);
                 }
             } else if (typeBy === 'letter') {
-                animateByLetter(text, style, direction, duration);
+                return animateByLetter(text, style, direction, duration);
             } else {
                 elements.previewText.textContent = text;
                 elements.previewText.classList.add(`animate-${style}`);
+                return duration;
             }
         }
 
@@ -4533,7 +4570,12 @@
                 
                 // Start typing after a brief pause
                 window.currentTypingTimeout = setTimeout(typeNextChar, 100);
-                
+
+                // The 100ms lead-in, one tick per character at a floor of 50ms,
+                // then the 500ms the cursor stays up after the last one. For long
+                // text this is well past `duration`, which is why the loop cannot
+                // be scheduled off `duration` alone.
+                return 100 + chars.length * typingSpeed + 500;
             } else {
                 // Word-by-word typing
                 const words = text.split(' ');
@@ -4577,6 +4619,8 @@
                 
                 // Start typing after a brief pause
                 window.currentTypingTimeout = setTimeout(typeNextWord, 100);
+
+                return 100 + words.length * typingSpeed + 500;
             }
         }
 
@@ -4606,6 +4650,12 @@
                 
                 elements.previewText.appendChild(span);
             });
+
+            // The last span in the sweep waits out the stagger twice over: once
+            // for the timeout that adds its class, then again for the inline
+            // animation-delay that only starts counting from there. Its animation
+            // then runs for the full duration, and that is when the pass is over.
+            return Math.max(0, letters.length - 1) * staggerDelay * 2 + duration;
         }
 
         function animateByWord(text, animClass, direction, duration) {
@@ -4638,6 +4688,9 @@
 
                 elements.previewText.appendChild(span);
             });
+
+            // Staggered twice, as in animateByLetter.
+            return Math.max(0, words.length - 1) * staggerDelay * 2 + duration;
         }
 
         function animateScale(text, typeBy, direction, duration, style) {
@@ -4648,10 +4701,10 @@
 
             if (typeBy === 'letter') {
                 // Scale by sentence - whole text scales at once
-                animateScaleBySentence(text, duration, style);
+                return animateScaleBySentence(text, duration, style);
             } else {
                 // Scale by word - each word scales as a unit
-                animateScaleByWord(text, direction, duration, style);
+                return animateScaleByWord(text, direction, duration, style);
             }
         }
 
@@ -4681,27 +4734,21 @@
                     elements.previewText.classList.add('animate-scale-grow');
                     elements.previewText.style.animationDuration = `${duration}ms`;
                     
-                    // After animation completes, prepare for next loop
+                    // Hold the grown state once the keyframes end. The repeat is
+                    // playAnimation()'s job, not this function's.
                     const timeout = setTimeout(() => {
                         if (!animationState.isPlaying) return; // Check if still playing
                         
                         if (elements.previewText) {
-                            // Reset for next loop
                             elements.previewText.classList.remove('animate-scale-grow');
                             elements.previewText.style.transform = 'scale(1)';
                             elements.previewText.style.opacity = '1';
-                            
-                            // Wait a brief moment then restart the animation
-                            const loopTimeout = setTimeout(() => {
-                                if (!animationState.isPlaying) return; // Check if still playing
-                                animateScaleBySentence(text, duration, style);
-                            }, 200); // Brief pause between loops
-                            
-                            window.scaleAnimationTimeouts.push(loopTimeout);
                         }
                     }, duration);
                     window.scaleAnimationTimeouts.push(timeout);
                 });
+
+                return duration;
             } else if (style === 'scale-shrink') {
                 // Start visible and normal size
                 elements.previewText.style.transform = 'scale(1)';
@@ -4714,30 +4761,25 @@
                     elements.previewText.classList.add('animate-scale-shrink');
                     elements.previewText.style.animationDuration = `${duration}ms`;
                     
-                    // After animation completes, prepare for next loop
+                    // scaleShrink has no fill mode, so the text would spring back
+                    // into view the moment the keyframes end. Pin it to the shrunk
+                    // state instead and let the pass sit there.
                     const timeout = setTimeout(() => {
                         if (!animationState.isPlaying) return; // Check if still playing
                         
                         if (elements.previewText) {
-                            // Remove animation class but stay in final state (invisible)
                             elements.previewText.classList.remove('animate-scale-shrink');
                             elements.previewText.style.transform = 'scale(0)';
                             elements.previewText.style.opacity = '0';
-                            
-                            // Wait longer to show invisible state, then reset and restart
-                            const loopTimeout = setTimeout(() => {
-                                if (!animationState.isPlaying) return; // Check if still playing
-                                // Now reset to visible state (State A) and restart
-                                elements.previewText.style.transform = 'scale(1)';
-                                elements.previewText.style.opacity = '1';
-                                animateScaleBySentence(text, duration, style);
-                            }, 800); // Longer pause to show the "shrunk" state
-                            
-                            window.scaleAnimationTimeouts.push(loopTimeout);
                         }
                     }, duration);
                     window.scaleAnimationTimeouts.push(timeout);
                 });
+
+                // Shrinking ends on empty space, so the pass deliberately holds
+                // there before repeating — long enough to read as a beat rather
+                // than a stutter. The next pass resets the transform.
+                return duration + SHRINK_HOLD_MS;
             }
         }
 
@@ -4838,24 +4880,9 @@
                 });
             }
             
-            // Schedule the next loop after all words have finished animating
-            const loopTimeout = setTimeout(() => {
-                if (!animationState.isPlaying) return; // Check if still playing
-                
-                // Reset preview text for next loop
-                elements.previewText.innerHTML = '';
-                elements.previewText.className = 'preview-text';
-                
-                // Wait a brief moment then restart the animation
-                const restartTimeout = setTimeout(() => {
-                    if (!animationState.isPlaying) return; // Check if still playing
-                    animateScaleByWord(text, direction, duration, style);
-                }, 200); // Brief pause between loops
-                
-                window.scaleAnimationTimeouts.push(restartTimeout);
-            }, totalAnimationTime + 200); // Wait for all animations to complete plus a small buffer
-            
-            window.scaleAnimationTimeouts.push(loopTimeout);
+            // The pass runs until the last word has finished its own animation;
+            // playAnimation() clears the preview and starts the next one.
+            return totalAnimationTime;
         }
 
         function animateRotate(text, typeBy, direction, duration, style) {
@@ -4865,9 +4892,9 @@
             // Note: Cleanup is now handled in applyAnimation() - no need to clear here
 
             if (typeBy === 'letter') {
-                animateRotateByLetter(text, direction, duration);
+                return animateRotateByLetter(text, direction, duration);
             } else {
-                animateRotateByWord(text, direction, duration, style);
+                return animateRotateByWord(text, direction, duration, style);
             }
         }
 
@@ -4883,7 +4910,10 @@
             const letters = text.split('');
             const staggerDelay = Math.max(50, duration / (letters.length * 2));
             const rotateClass = direction === 'backwards' ? 'animate-rotate-backwards' : 'animate-rotate';
-            const totalTime = (letters.length - 1) * staggerDelay + duration;
+            // Each letter's stagger is paid twice — the timeout that adds the class
+            // and the inline animation-delay that follows it — so the last letter
+            // finishes two sweeps plus one animation in.
+            const totalTime = Math.max(0, letters.length - 1) * staggerDelay * 2 + duration;
 
             letters.forEach((letter, index) => {
                 const span = document.createElement('span');
@@ -4902,17 +4932,7 @@
                 window.rotateAnimationTimeouts.push(t);
             });
 
-            // Loop
-            const loopTimeout = setTimeout(() => {
-                if (!animationState.isPlaying) return;
-                elements.previewText.innerHTML = '';
-                const restartTimeout = setTimeout(() => {
-                    if (!animationState.isPlaying) return;
-                    animateRotateByLetter(text, direction, duration);
-                }, 200);
-                window.rotateAnimationTimeouts.push(restartTimeout);
-            }, totalTime + 200);
-            window.rotateAnimationTimeouts.push(loopTimeout);
+            return totalTime;
         }
 
         function animateRotateBySentence(text, duration, style, direction) {
@@ -4934,26 +4954,22 @@
             elements.previewText.classList.add(rotateClass);
             elements.previewText.style.animationDuration = `${duration}ms`;
             
-            // Schedule next loop after animation completes
+            // Clear the class once the keyframes end so the next pass can re-add
+            // it. animateRotate() does not currently route here — letter goes to
+            // animateRotateByLetter — but it follows the same contract as the
+            // rest: start a pass, report its length, leave looping to the driver.
             const timeout = setTimeout(() => {
                 if (!animationState.isPlaying) return; // Check if still playing
                 
                 if (elements.previewText) {
-                    // Reset for next loop - remove both possible rotate classes
                     elements.previewText.classList.remove('animate-rotate', 'animate-rotate-backwards');
                     elements.previewText.style.transform = '';
                     elements.previewText.style.opacity = '';
-                    
-                    // Wait a brief moment then restart the animation
-                    const loopTimeout = setTimeout(() => {
-                        if (!animationState.isPlaying) return; // Check if still playing
-                        animateRotateBySentence(text, duration, style, direction);
-                    }, 200); // Brief pause between loops
-                    
-                    window.rotateAnimationTimeouts.push(loopTimeout);
                 }
             }, duration);
             window.rotateAnimationTimeouts.push(timeout);
+
+            return duration;
         }
 
         function animateRotateByWord(text, direction, duration, style) {
@@ -5046,24 +5062,7 @@
                 });
             }
             
-            // Schedule next loop after all words complete (like scale word animation)
-            const loopTimeout = setTimeout(() => {
-                if (!animationState.isPlaying) return;
-                
-                // Reset preview text for next loop
-                elements.previewText.innerHTML = '';
-                elements.previewText.className = 'preview-text';
-                
-                // Wait a brief moment then restart the animation
-                const restartTimeout = setTimeout(() => {
-                    if (!animationState.isPlaying) return;
-                    animateRotateByWord(text, direction, duration, style);
-                }, 200);
-                
-                window.rotateAnimationTimeouts.push(restartTimeout);
-            }, totalTime + 200);
-            
-            window.rotateAnimationTimeouts.push(loopTimeout);
+            return totalTime;
         }
 
         function createComponent() {
