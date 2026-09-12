@@ -3088,6 +3088,7 @@
         // Initialize
         function init() {
             setupEventListeners();
+            setupPreviewFontWarning();
             setupDurationArrows();
             setupFeedbackModal();
             initializeColorPicker();
@@ -3252,11 +3253,47 @@
         // the animate button's enabled state and neither may override this veto.
         let selectedFontUnsupported = false;
 
+        // One banner per screen. Step 1's lives in the markup; the preview's is
+        // cloned from it at startup so the wording and the link can never drift
+        // apart, and both are driven from here.
+        const FONT_WARNING_IDS = ['font-warning', 'preview-font-warning'];
+
+        function setupPreviewFontWarning() {
+            const source = document.getElementById('font-warning');
+            const previewSection = document.getElementById('preview-section');
+            if (!source || !previewSection) return;
+            if (document.getElementById('preview-font-warning')) return;
+
+            const clone = source.cloneNode(true);
+            clone.id = 'preview-font-warning';
+            clone.style.display = 'none';
+            clone.style.marginBottom = '8px';
+
+            // Directly under the back button, where it is the first thing read on
+            // the screen rather than something below the fold.
+            const backBtn = document.getElementById('back-btn');
+            if (backBtn && backBtn.parentNode === previewSection) {
+                previewSection.insertBefore(clone, backBtn.nextSibling);
+            } else {
+                previewSection.insertBefore(clone, previewSection.firstChild);
+            }
+        }
+
         function updateFontWarning(selection) {
             selectedFontUnsupported = isFontUnsupported(selection);
-            const warning = document.getElementById('font-warning');
-            if (!warning) return;
-            warning.style.display = selectedFontUnsupported ? 'block' : 'none';
+
+            let changed = false;
+            FONT_WARNING_IDS.forEach(id => {
+                const warning = document.getElementById(id);
+                if (!warning) return;
+                const next = selectedFontUnsupported ? 'block' : 'none';
+                if (warning.style.display !== next) changed = true;
+                warning.style.display = next;
+            });
+
+            // The banner takes vertical space on whichever screen is showing, so
+            // the window has to grow and shrink with it.
+            if (changed) resizePluginToContent();
         }
 
         // Adopt the selected layer's typography so the preview starts from what
@@ -3324,13 +3361,24 @@
             const elements = getDOMElements();
             
             if (selection && selection.type === 'TEXT') {
+                // Resolve font support first: whether this layer can be taken on
+                // at all, and the character counter and animate button below, all
+                // depend on it.
+                updateFontWarning(selection);
+
+                // On the preview screen an unsupported layer is refused rather
+                // than silently becoming the subject: its text cannot be rendered
+                // in its own font here, nor reproduced in the component, so the
+                // preview keeps what it was already showing and the banner above
+                // says why. Step 1 still takes the text on — shown in the disabled
+                // input with Animate blocked — which is the behaviour there.
+                if (selectedFontUnsupported && currentStep === 2) {
+                    return;
+                }
+
                 // Text layer selected
                 selectedLayerName = selection.name;
                 selectedText = selection.content || '';
-
-                // Resolve font support first: the character counter and the
-                // animate button below both depend on it
-                updateFontWarning(selection);
 
                 // Start the preview from the layer's own typography
                 inheritTypographyOnce(selection);
@@ -3623,6 +3671,11 @@
             elements.previewSection.style.display = 'none';
             elements.previewSection.classList.remove('hiding');
             elements.chooseSection.style.display = 'block';
+
+            // Re-read the selection now that step 1 is showing. A layer refused
+            // while previewing was never taken on, so without this the input and
+            // the layer name here would still describe the previous subject.
+            parent.postMessage({ pluginMessage: { type: 'get-selection' } }, '*');
             
             // Update step indicators
             if (elements.step1) elements.step1.classList.add('active');
