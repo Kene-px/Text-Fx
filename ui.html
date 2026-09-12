@@ -3286,7 +3286,13 @@
                 selectFontSize(Math.round(selection.fontSize));
             }
             if (selection.textAlign) selectAlignment(selection.textAlign);
-            if (selection.verticalAlign) selectAlignment(selection.verticalAlign);
+            // Vertical alignment is deliberately not inherited. Figma leaves
+            // textAlignVertical at TOP on every text layer that has not been given
+            // a fixed height — which is nearly all of them — so adopting it would
+            // pin the preview to the top of the window and show Align Top as the
+            // selection on layers whose author never chose it. The preview window
+            // is a viewport rather than the layer's own frame, so it keeps its own
+            // default of centred until the user picks otherwise.
             if (selection.textCase) selectCase(selection.textCase);
             if (selection.color) {
                 const colorInput = document.getElementById('color-picker-input');
@@ -3302,8 +3308,12 @@
 
         function inheritTypographyOnce(selection) {
             if (!selection || selection.type !== 'TEXT') { lastInheritedKey = null; return; }
+            // verticalAlign is not part of the key: it is not inherited, so a
+            // layer that differs only by it is the same layer as far as the
+            // preview is concerned, and re-inheriting would discard the user's
+            // toolbar edits for no reason.
             const key = JSON.stringify([selection.name, selection.fontFamily, selection.fontStyle,
-                selection.fontSize, selection.textAlign, selection.verticalAlign,
+                selection.fontSize, selection.textAlign,
                 selection.textCase, selection.color]);
             if (key === lastInheritedKey) return;
             lastInheritedKey = key;
